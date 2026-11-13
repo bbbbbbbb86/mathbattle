@@ -527,6 +527,25 @@ mark .fr{margin:0}
 @keyframes npulse{50%{opacity:.45}}
 .netpic{width:min(40vw,200px);animation:gbob 1.6s ease-in-out infinite}.netpic.sad{filter:grayscale(.7);rotate:12deg;animation:none}
 .npad{flex:0 1 300px;max-width:420px;width:100%;align-self:center}
+
+.nfmt{display:flex;justify-content:center;gap:12px;margin:6px 0 0}
+.nfmt button{border:3px solid var(--ink);background:#fff;border-radius:14px 18px 13px 17px;padding:6px 20px;display:flex;flex-direction:column;align-items:center;font-size:18px;opacity:.6;transition:transform .15s,opacity .15s}
+.nfmt button small{font-size:12px;font-weight:700;color:var(--ink-soft)}
+.nfmt button.on{background:#ffd93b;opacity:1;transform:translateY(-3px) rotate(-1.5deg);box-shadow:3px 4px 0 var(--ink)}
+.netpic.sm{width:min(26vw,120px)}
+.oppst{position:absolute;right:3%;top:5%;z-index:9;background:#fff;border:2.5px solid var(--ink);border-radius:999px;padding:1px 12px;font-weight:900;font-size:clamp(12px,2.8vw,15px);rotate:2deg;box-shadow:2px 3px 0 rgba(51,38,31,.25);animation:stampin .25s both}
+.oppst.ok{background:#e2f3d6}
+.vsfs{position:fixed;inset:0;z-index:85;overflow:hidden;pointer-events:none;background:#fffaf0;animation:ultout 1.9s both}
+.vsfs .vl,.vsfs .vr{position:absolute;top:-10%;bottom:-10%;width:60%;rotate:8deg}
+.vsfs .vl{left:-12%;background:#ffd93b;border-right:6px solid var(--ink);animation:vsl .45s cubic-bezier(.2,.9,.3,1) both}
+.vsfs .vr{right:-12%;background:#8fd0f5;border-left:6px solid var(--ink);animation:vsr .45s cubic-bezier(.2,.9,.3,1) both}
+@keyframes vsl{from{translate:-100% 0}}@keyframes vsr{from{translate:100% 0}}
+.vsfs .vt{position:absolute;top:50%;width:46%;display:flex;flex-direction:column;align-items:center;translate:0 -50%}
+.vsfs .vt.a{left:1%;animation:vsl .6s .1s cubic-bezier(.3,1.4,.5,1) both}.vsfs .vt.b{right:1%;animation:vsr .6s .1s cubic-bezier(.3,1.4,.5,1) both}
+.vsfs .vt img{width:min(62%,36vh);filter:drop-shadow(6px 6px 0 rgba(51,38,31,.3))}.vsfs .vt img+img{width:min(40%,22vh);margin-top:-12%}.vsfs .vt img:nth-child(2){align-self:flex-start;margin-left:6%}.vsfs .vt img:nth-child(3){align-self:flex-end;margin-right:6%;margin-top:-28%}
+.vsfs .vt.b img{transform:scaleX(-1)}
+.vsfs .vt b{margin-top:8px;font-size:clamp(20px,5vw,34px);background:#fff;border:3px solid var(--ink);border-radius:999px;padding:0 22px;rotate:-3deg}
+.vsfs em{position:absolute;left:50%;top:50%;translate:-50% -50%;font:900 clamp(60px,20vw,160px)/1 var(--display);font-style:normal;color:var(--bad);-webkit-text-stroke:.07em var(--ink);paint-order:stroke fill;rotate:-8deg;animation:ultnm 1.5s both}
 /* 場地轉盤：相片卡 */
 .cc.ac{aspect-ratio:16/10;height:auto;width:min(66%,calc((100% - 0px)*.66));bottom:16%}
 .acaro .cc.ac{height:auto}
@@ -721,7 +740,7 @@ mark .fr{margin:0}
   <div class="topbar"><span class="rd" id="rd"></span><span class="grow" id="arena-name"></span><button class="btn small" id="btn-help1">規則</button><button class="btn small" id="btn-quit">離開</button></div>
   <div class="huds"><div class="hud" id="h0"></div><div class="hud" id="h1"></div></div>
   <div class="stage" id="stage">
-    <div class="fighter" id="f0"><img alt=""></div><div class="fighter" id="f1"><img alt=""></div>
+    <div class="fighter" id="f0"><img alt=""></div><div class="fighter" id="f1"><img alt=""></div><span class="oppst" id="oppst" hidden></span>
   </div>
   <div class="desk" id="desk"></div>
   <div class="panel" id="panel"></div>
@@ -1383,7 +1402,7 @@ function startSetup(mode){
        {name:mode==='cpu'?'電腦':'玩家 2',grade:5,unit:'calc',char:null,moves:[]}]};
   buildSteps();show('s-setup');renderSetup()}
 function buildSteps(){const c=S.mode==='cpu';
-  if(S.mode==='net'){S.fmt=1;S.steps=NET.role==='host'?['grade0','arena','char0','moves0']:['grade0','char0','moves0'];return}
+  if(S.mode==='net'){const h=NET.role==='host';S.fmt=NET.fmt;S.steps=S.fmt===3?(h?['grade0','arena','draft','team0']:['grade0','draft','team0']):(h?['grade0','arena','char0','moves0']:['grade0','char0','moves0']);return}
   S.steps=S.fmt===3?(c?['grade0','arena','draft','team0']:['grade0','grade1','arena','draft','team0','team1'])
     :(c?['grade0','arena','char0','moves0']:['grade0','grade1','arena','char0','moves0','pass','char1','moves1'])}
 function renderSetup(){
@@ -1420,10 +1439,10 @@ function renderSetup(){
     <div class="case"><span>鉛筆盒</span>${[0,1,2,3].map(k=>p.moves[k]!==undefined?`<span class="slot f" style="${spr(p.char,p.moves[k])}"></span>`:`<span class="slot"></span>`).join('')}</div>`;
   }else if(view==='draft'){
     const ids=Object.keys(CHARS);
-    if(!S.draft)S.draft={order:[0,1,1,0,0,1],turn:0,focus:ids[0]};
+    if(!S.draft)S.draft={order:S.mode==='net'&&NET.role==='guest'?[1,0,0,1,1,0]:[0,1,1,0,0,1],turn:0,focus:ids[0]};
     const D=S.draft,doneD=D.turn>=6,who=doneD?-1:D.order[D.turn];ok=doneD;
     const rost=`<div class="rost">${[0,1].map(t=>`<div class="rs ${who===t?'now':''}"><b>${S.p[t].name}</b><div>${[0,1,2].map(k=>S.team[t][k]?`<img src="img/${S.team[t][k].char}.webp" alt="">`:'<i></i>').join('')}</div></div>`).join('')}</div>`;
-    body=h`<h2>輪流選角色</h2>${stepTxt}`+rost+(doneD?`<div class="center"><p class="big">雙方都選好了</p><button class="btn small" data-k="redraft" data-v="1">重新選角</button></div>`
+    body=h`<h2>輪流選角色</h2>${stepTxt}`+rost+(doneD?`<div class="center"><p class="big">雙方都選好了</p>${S.mode==='net'?'':'<button class="btn small" data-k="redraft" data-v="1">重新選角</button>'}</div>`
       :`<p class="turn">輪到${S.p[who].name}選第 ${S.team[who].length+1} 隻</p>${caroHTML(ids)}<div class="who"><div class="ribbon" id="rb"></div><p id="tr"></p><div id="rel"></div><button class="btn primary" data-k="dpick" data-v="1" id="dpk">選這隻</button></div>`);
   }else if(view.startsWith('team')){
     S.tf=Math.min(S.tf||0,2);
@@ -1451,6 +1470,7 @@ function renderSetup(){
     else if(k==='dfocus')S.draft.focus=v;
     else if(k==='redraft'){S.team=[[],[]];S.draft=null}
     else if(k==='dpick'){const D=S.draft,add=(t,c)=>{S.team[t].push({name:CHARS[c].n,char:c,moves:recoMoves(c)});D.turn++};
+      if(S.mode==='net'){if(D.order[D.turn]!==0)return;NET.link.send({t:'dp',c:D.focus})}
       add(D.order[D.turn],D.focus);
       while(D.turn<6&&S.mode==='cpu'&&D.order[D.turn]===1)add(1,cpuDraft([...S.team[0],...S.team[1]].map(u=>u.char),S.team[0].map(u=>u.char)));
       const tk=[...S.team[0],...S.team[1]].map(u=>u.char);if(tk.includes(D.focus))D.focus=Object.keys(CHARS).find(c=>!tk.includes(c))||D.focus}
@@ -1465,7 +1485,7 @@ function renderSetup(){
     mountCaro(ids,ids.indexOf(S.arena),k=>{S.arena=ids[k];const a=ARENAS[ids[k]];$('#rb').textContent=a?a.n:'隨機場地';$('#tr').textContent=a?a.rule:'開戰時才抽出，十選一'},k=>ACOL[k]||'#ffd93b')}
   if(view.startsWith('char')){const ids=Object.keys(CHARS);mountCaro(ids,ids.indexOf(p.char),k=>{if(p.char!==ids[k]){p.char=ids[k];p.moves=[]}caroInfo(CHARS[ids[k]])})}
   else if(view==='draft'&&S.draft.turn<6){const ids=Object.keys(CHARS),D=S.draft,who=D.order[D.turn];
-    mountCaro(ids,ids.indexOf(D.focus),k=>{D.focus=ids[k];caroInfo(CHARS[ids[k]]);const dup=[...S.team[0],...S.team[1]].some(u=>u.char===ids[k]);$('#dpk').disabled=dup;$('#dpk').textContent=dup?'已經被選走了':'選這隻'})}
+    mountCaro(ids,ids.indexOf(D.focus),k=>{D.focus=ids[k];caroInfo(CHARS[ids[k]]);const dup=[...S.team[0],...S.team[1]].some(u=>u.char===ids[k]);const wait=S.mode==='net'&&who!==0;$('#dpk').disabled=dup||wait;$('#dpk').textContent=wait?'等對手選角…':dup?'已經被選走了':'選這隻'})}
   else if(view.startsWith('team')){const T=S.team[i];
     const pickT=(k,hop)=>{S.tf=k;const u=T[k],c=CHARS[u.char];$('#rb').innerHTML=`${c.n} ${elChip(c.el)}`;
       $('#mh').innerHTML=u.moves.map((mi,q)=>{const m=c.moves[mi];return `<span class="mh ${tint(m)}" style="--q:${q}"><span class="mimg" style="${spr(u.char,mi)}"></span>${m.n}</span>`}).join('');
@@ -1478,8 +1498,10 @@ function renderSetup(){
 
 const boardInfo=(k,g)=>{const na=(UNITS[k].from||1)>g;let ex='';if(!na){try{ex=makeQuestion(k,g,1).q}catch(e){}}return {na,ex:na?'三年級開始':ex,std:na?'':(STD[k][g]||'')}};
 
-/* ===== 房間密碼連線（只有自架網站版可用；用 PeerJS 做點對點連線） ===== */
-const NET={ok:false,role:null,me:0,code:'',link:null,cfg:[null,null],oppAct:null,res:null,sent:false,ready:false,waitT:null};
+/* ===== 房間密碼連線（只有自架網站版可用；用 PeerJS 做點對點連線） =====
+   每台裝置都把自己當成 0 號（畫面左邊）、對手當 1 號。結果由房主計算，
+   傳給加入者時是「房主視角」，加入者收到後左右對調再使用。 */
+const NET={ok:false,role:null,me:0,fmt:1,code:'',link:null,cfg:[null,null],oppAct:null,res:null,sent:false,ready:false,rep:null,repWait:null,oppSt:''};
 const NETTEST=/[?&]bcnet/.test(location.search);            // 測試用：同一台瀏覽器的兩個分頁互連
 const PEER_CDN=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];
 (function loadPeer(k){const done=ok=>{NET.ok=ok;const b=$('#tk-net'),t=$('#tk-net-tape');if(ok){b.disabled=false;b.classList.remove('off');t.textContent='輸入 4 位數密碼'}else t.textContent='自架網站版才能用'};
@@ -1488,7 +1510,7 @@ const PEER_CDN=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn
 const PID=code=>'qwmathbattle-v1-'+code;
 // 連線層：open(role,code,{onOpen,onData,onClose,onError}) → {send,close}
 function netOpen(role,code,h){
-  if(NETTEST){const bc=new BroadcastChannel('mb-'+code);let up=false,hello=null;const L={send:o=>bc.postMessage({from:role,o}),close:()=>{try{bc.postMessage({from:role,bye:1});bc.close()}catch(e){}clearInterval(hello)}};
+  if(NETTEST){const bc=new BroadcastChannel('mb-'+code);let up=false,hello=null;const L={send:o=>bc.postMessage({from:role,o:JSON.parse(JSON.stringify(o))}),close:()=>{try{bc.postMessage({from:role,bye:1});bc.close()}catch(e){}clearInterval(hello)}};
     bc.onmessage=e=>{const d=e.data;if(d.from===role)return;if(d.bye){h.onClose();return}if(d.hi){if(role==='host')bc.postMessage({from:role,hi:1});if(!up){up=true;clearInterval(hello);h.onOpen()}return}h.onData(d.o)};
     if(role==='guest'){let n=0;hello=setInterval(()=>{if(up)return;if(++n>12){clearInterval(hello);h.onError('找不到這個房間，請確認密碼。');return}bc.postMessage({from:role,hi:1})},400)}
     return L}
@@ -1502,24 +1524,26 @@ function netOpen(role,code,h){
       peer.on('error',e=>{if(closed)return;clearTimeout(to);h.onError(e&&e.type==='peer-unavailable'?'找不到這個房間，請確認密碼。':'連線服務出了問題（'+(e&&e.type||'未知')+'），請稍後再試。')})}
   }catch(e){setTimeout(()=>h.onError('這個瀏覽器不支援連線對戰。'),0)}
   return L}
-function netLeave(msg){const had=!!NET.link;try{NET.link&&NET.link.send({t:'bye'})}catch(e){}try{NET.link&&NET.link.close()}catch(e){}NET.link=null;NET.role=null;NET.cfg=[null,null];NET.oppAct=null;NET.res=null;NET.ready=false;return had}
-function netDropped(){if(!NET.link)return;netLeave();stopTimer();resToken++;$('#s-battle').classList.remove('show');show('s-setup');
+function netLeave(msg){const had=!!NET.link;try{NET.link&&NET.link.send({t:'bye'})}catch(e){}try{NET.link&&NET.link.close()}catch(e){}NET.link=null;NET.role=null;NET.cfg=[null,null];NET.oppAct=null;NET.res=null;NET.ready=false;NET.rep=null;NET.repWait=null;netOpp('');return had}
+function netDropped(){if(!NET.link)return;netLeave();stopTimer();resToken++;sfx('lose');document.querySelectorAll('.vsfs').forEach(e=>e.remove());$('#s-battle').classList.remove('show');show('s-setup');
   $('#s-setup').innerHTML=`<div class="center"><img class="netpic sad" src="img/cat.webp" alt=""><p class="big">對手離線了</p><p class="sub">連線中斷，這場對戰結束。</p><button class="btn primary" id="nb">回首頁</button></div>`;$('#nb').onclick=()=>show('s-title')}
 function netLobby(){netLeave();show('s-setup');const el=$('#s-setup');
   el.innerHTML=`<h2>連線對戰</h2><p class="sub">兩台裝置各開這個網頁。一個人開房間，另一個人輸入 4 位數密碼加入。</p>
   <div class="ftix netpick"><button class="ftk sel" id="nh"><span class="fvs"><img src="img/owl.webp" alt=""></span><b>開房間</b><small>我來當房主，產生密碼</small></button>
   <button class="ftk sel" id="nj"><span class="fvs"><img class="r" src="img/penguin.webp" alt=""></span><b>加入房間</b><small>輸入同學給的密碼</small></button></div>
   <div class="foot"><button class="btn" id="nb">回首頁</button></div>`;
-  $('#nb').onclick=()=>show('s-title');$('#nh').onclick=netHost;$('#nj').onclick=netJoin}
+  $('#nb').onclick=()=>show('s-title');$('#nh').onclick=()=>netHost();$('#nj').onclick=netJoin}
 function netHandlers(){return {onData:netMsg,onClose:netDropped}}
-function netHost(tries=0){const code=String(1000+Math.floor(Math.random()*9000)),el=$('#s-setup');NET.role='host';NET.me=0;NET.code=code;
-  el.innerHTML=`<h2>開房間</h2><p class="sub">把這組密碼告訴對手，等他加入。</p>
+function netHost(tries=0,fmt=1){const code=String(1000+Math.floor(Math.random()*9000)),el=$('#s-setup');NET.role='host';NET.fmt=fmt;NET.code=code;
+  el.innerHTML=`<h2>開房間</h2><p class="sub">先選對戰形式，再把密碼告訴對手，等他加入。</p>
+  <div class="nfmt" id="nfmt"><button data-f="1" class="${fmt===1?'on':''}"><b>單挑</b><small>1 對 1</small></button><button data-f="3" class="${fmt===3?'on':''}"><b>3 對 3</b><small>輪流選角、可換人</small></button></div>
   <div class="center"><div class="ncode" id="ncode">${[...code].map((d,k)=>`<b style="--k:${k}">${d}</b>`).join('')}</div><p class="nwait" id="nst">正在開房間…</p><img class="netpic" src="img/owl.webp" alt=""></div>
   <div class="foot"><button class="btn" id="nb">取消</button></div>`;
+  $('#nfmt').onclick=e=>{const b=e.target.closest('button');if(!b)return;NET.fmt=+b.dataset.f;$('#nfmt').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))};
   $('#nb').onclick=()=>{netLeave();netLobby()};
   NET.link=netOpen('host',code,Object.assign(netHandlers(),{onListen:()=>{const t=$('#nst');if(t)t.textContent='等待對手加入…'},
-    onOpen:()=>{sfx('switch');netSetup()},
-    onError:m=>{if(m==='ID_TAKEN'&&tries<5){try{NET.link.close()}catch(e){}NET.link=null;return netHost(tries+1)}const t=$('#nst');if(t){t.textContent=m==='ID_TAKEN'?'房間密碼剛好被用走了，請再試一次。':m;t.classList.add('err')}}}));
+    onOpen:()=>{sfx('switch');NET.link.send({t:'cfg',fmt:NET.fmt});netSetup()},
+    onError:m=>{if(m==='ID_TAKEN'&&tries<5){try{NET.link.close()}catch(e){}NET.link=null;return netHost(tries+1,NET.fmt)}const t=$('#nst');if(t){t.textContent=m==='ID_TAKEN'?'房間密碼剛好被用走了，請再試一次。':m;t.classList.add('err')}}}));
   if(NETTEST){const t=$('#nst');if(t)t.textContent='等待對手加入…'}}
 function netJoin(){const el=$('#s-setup');let val='';
   el.innerHTML=`<h2>加入房間</h2><p class="sub">輸入房主畫面上的 4 位數密碼。</p>
@@ -1527,41 +1551,68 @@ function netJoin(){const el=$('#s-setup');let val='';
   <div class="pad npad" id="npad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-n="${n}">${n}</button>`).join('')}<button class="del" data-n="del">刪除</button><button data-n="0">0</button><button class="ok" data-n="ok">連線</button></div>
   <div class="foot"><button class="btn" id="nb">取消</button></div>`;
   const draw=()=>$('#ncode').querySelectorAll('b').forEach((b,k)=>b.textContent=val[k]||'');let busy=false;
-  const go=()=>{if(val.length!==4||busy)return;busy=true;NET.role='guest';NET.me=1;NET.code=val;const t=$('#nst');t.classList.remove('err');t.textContent='連線中…';
-    NET.link=netOpen('guest',val,Object.assign(netHandlers(),{onOpen:()=>{sfx('switch');netSetup()},onError:m=>{busy=false;try{NET.link&&NET.link.close()}catch(e){}NET.link=null;const t=$('#nst');if(t){t.textContent=m;t.classList.add('err')}}}))};
-  $('#npad').onclick=e=>{const b=e.target.closest('button');if(!b||busy)return;const n=b.dataset.n;if(n==='ok')return go();if(n==='del')val=val.slice(0,-1);else if(val.length<4)val+=n;draw()};
+  const go=()=>{if(val.length!==4||busy)return;busy=true;NET.role='guest';NET.code=val;const t=$('#nst');t.classList.remove('err');t.textContent='連線中…';
+    NET.link=netOpen('guest',val,Object.assign(netHandlers(),{onOpen:()=>{sfx('switch');const t=$('#nst');if(t)t.textContent='連上了！等房主的設定…'},
+      onError:m=>{busy=false;try{NET.link&&NET.link.close()}catch(e){}NET.link=null;val='';draw();const t=$('#nst');if(t){t.textContent=m+' 請重新輸入。';t.classList.add('err')}}}))};
+  $('#npad').onclick=e=>{const b=e.target.closest('button');if(!b||busy)return;const n=b.dataset.n;if(n==='ok')return go();const t=$('#nst');if(t.classList.contains('err')){t.classList.remove('err');t.innerHTML='&nbsp;'}if(n==='del')val=val.slice(0,-1);else if(val.length<4)val+=n;draw()};
   $('#nb').onclick=()=>{netLeave();netLobby()}}
 function netSetup(){NET.cfg=[null,null];NET.ready=false;
-  S={mode:'net',step:0,fmt:1,arena:'standard',cpuLevel:'normal',team:[[],[]],draft:null,edit:null,alt:false,
+  S={mode:'net',step:0,fmt:NET.fmt,arena:'standard',cpuLevel:'normal',team:[[],[]],draft:null,edit:null,alt:false,
     p:[{name:'你',grade:5,unit:'calc',char:null,moves:[]},{name:'對手',grade:5,unit:'calc',char:null,moves:[]}]};
+  if(NET.fmt===3)S.draft={order:NET.role==='guest'?[1,0,0,1,1,0]:[0,1,1,0,0,1],turn:0,focus:Object.keys(CHARS)[0]};
   buildSteps();show('s-setup');renderSetup()}
-function netReady(){const p=S.p[0],cfg={grade:p.grade,unit:p.unit,slow:!!p.slow,char:p.char,moves:[...p.moves].sort((a,b)=>a-b)};
-  NET.cfg[NET.me]=cfg;NET.ready=true;NET.oppAct=null;NET.res=null;resToken++;$('#s-battle').classList.remove('show');show('s-setup');
-  $('#s-setup').innerHTML=`<div class="center"><img class="netpic" src="img/${p.char}.webp" alt=""><p class="big">準備好了！</p><p class="nwait">等待對手選好角色…</p><button class="btn" id="nb">離開房間</button></div>`;
+function netReady(){const p=S.p[0],srt=m=>[...m].sort((a,b)=>a-b);
+  const cfg=Object.assign({grade:p.grade,unit:p.unit,slow:!!p.slow},S.fmt===3?{team:S.team[0].map(u=>({char:u.char,moves:srt(u.moves)}))}:{char:p.char,moves:srt(p.moves)});
+  NET.cfg[0]=cfg;NET.ready=true;NET.oppAct=null;NET.res=null;NET.rep=null;resToken++;$('#s-battle').classList.remove('show');show('s-setup');
+  $('#s-setup').innerHTML=`<div class="center"><img class="netpic" src="img/${S.fmt===3?S.team[0][0].char:p.char}.webp" alt=""><p class="big">準備好了！</p><p class="nwait" id="nst">${NET.cfg[1]?'對手也準備好了，馬上開始…':'等待對手準備…'}</p><button class="btn" id="nb">離開房間</button></div>`;
   $('#nb').onclick=()=>{netLeave();show('s-title')};
   NET.link.send({t:'ready',cfg});netMaybeStart()}
 function netMaybeStart(){if(NET.role!=='host'||!NET.cfg[0]||!NET.cfg[1]||!NET.ready)return;
-  const arena=S.arena==='random'?pick(Object.keys(ARENAS)):S.arena,m={t:'start',arena,cf:NET.cfg,alt:!!S.alt};NET.link.send(m);netStart(m)}
-function netStart(m){NET.ready=false;NET.cfg=[null,null];NET.oppAct=null;NET.res=null;NET.sent=false;
-  const cf=m.cf.map((c,i)=>Object.assign({},c,{name:i===NET.me?'你':'對手'}));beginBattle('net',m.arena,cf,1,m.alt)}
+  const arena=S.arena==='random'?pick(Object.keys(ARENAS)):S.arena,m={t:'start',arena,cf:NET.cfg,alt:!!S.alt,fmt:NET.fmt};NET.link.send(m);netStart(m)}
+function netStart(m){NET.ready=false;NET.cfg=[null,null];NET.oppAct=null;NET.res=null;NET.rep=null;NET.repWait=null;NET.sent=false;
+  const mine=NET.role==='host'?0:1,cf=[m.cf[mine],m.cf[1-mine]].map((c,i)=>Object.assign({},c,{name:i===0?'你':'對手'}));
+  const lead=c=>c.team?c.team.map(u=>u.char):[c.char];
+  const d=document.createElement('div');d.className='vsfs';d.innerHTML=`<i class="vl"></i><i class="vr"></i><div class="vt a">${lead(cf[0]).map(c=>`<img src="img/${c}.webp" alt="">`).join('')}<b>你</b></div><div class="vt b">${lead(cf[1]).map(c=>`<img src="img/${c}.webp" alt="">`).join('')}<b>對手</b></div><em>VS</em>`;
+  document.body.appendChild(d);sfx('ult');setTimeout(()=>{d.remove()},1900);
+  setTimeout(()=>{if(!NET.link)return;beginBattle('net',m.arena,cf,m.fmt||1,m.alt)},1500)}
+// 加入者把房主視角的資料左右對調
+const swp=i=>i===0?1:i===1?0:i;
+const netFlipEv=ev=>ev.map(e=>{const q=Object.assign({},e);if(q.p!==undefined)q.p=swp(q.p);if(q.hp)q.hp=[q.hp[1],q.hp[0]];if(q.winner!==undefined)q.winner=swp(q.winner);return q});
+const netFlipSnap=sn=>({round:sn.round,over:sn.over?Object.assign({},sn.over,{winner:swp(sn.over.winner)}):sn.over,pending:(sn.pending||[]).map(swp),players:[sn.players[1],sn.players[0]]});
+const OPPST={pick:'選招中…',ans:'作答中…',done:'已完成 ✓',rep:'換人中…'};
+function netOpp(st){NET.oppSt=st;const t=$('#oppst');if(t){t.hidden=!st;t.textContent='對手'+(OPPST[st]||'');t.classList.toggle('ok',st==='done')}const w=$('#wst');if(w)w.textContent=st==='done'?'對手也完成了！':'對手'+(OPPST[st]||'作答中…')}
+function netState(st){try{NET.link&&NET.link.send({t:'st',s:st})}catch(e){}}
 function netMsg(m){if(!m||!NET.link)return;
-  if(m.t==='ready'){NET.cfg[1-NET.me]=m.cfg;netMaybeStart()}
+  if(m.t==='cfg'){if(NET.role==='guest'){NET.fmt=m.fmt||1;netSetup()}}
+  else if(m.t==='dp'){if(S&&S.mode==='net'&&S.draft&&S.draft.turn<6&&S.draft.order[S.draft.turn]===1){S.team[1].push({name:CHARS[m.c].n,char:m.c,moves:recoMoves(m.c)});S.draft.turn++;
+      const tk=[...S.team[0],...S.team[1]].map(u=>u.char);if(tk.includes(S.draft.focus))S.draft.focus=Object.keys(CHARS).find(c=>!tk.includes(c))||S.draft.focus;
+      sfx('tick');if($('#s-setup').classList.contains('on')&&S.steps[S.step]==='draft'&&S.edit==null&&!NET.ready)renderSetup()}}
+  else if(m.t==='ready'){NET.cfg[1]=m.cfg;sfx('first');const t=$('#nst');if(t&&NET.ready)t.textContent='對手也準備好了，馬上開始…';netMaybeStart()}
   else if(m.t==='start'){if(NET.role==='guest')netStart(m)}
+  else if(m.t==='st'){if(net()){if(m.s==='done'&&NET.oppSt!=='done')sfx('tick');netOpp(m.s)}}
   else if(m.t==='act'){NET.oppAct=m;netTry()}
   else if(m.t==='res'){NET.res=m;netTry()}
+  else if(m.t==='rep'){if(NET.repWait){const f=NET.repWait;NET.repWait=null;f(m.k)}else NET.rep=m}
   else if(m.t==='bye'){netDropped()}}
-function netSubmit(){const a=G.acts[NET.me];NET.sent=true;NET.link.send({t:'act',r:G.round,a:{mi:a.mi,correct:!!a.correct,time:a.time}});
-  panel(`<div class="center"><p class="big">作答完成</p><p class="nwait">等待對手作答…</p></div>`);netTry()}
+const netAct=a=>a.sw!==undefined?{sw:a.sw}:{mi:a.mi,correct:!!a.correct,time:a.time};
+function netSubmit(){const a=G.acts[0];NET.sent=true;NET.link.send({t:'act',r:G.round,a:netAct(a)});netState('done');
+  const o=G.players[1];
+  panel(`<div class="center"><img class="netpic sm" src="img/${G.players[0].char}.webp" alt=""><p class="big">${a.sw!==undefined?'換人完成':'作答完成'}</p><p class="nwait" id="wst">${NET.oppSt==='done'?'對手也完成了！':'對手'+(OPPST[NET.oppSt]||'作答中…')}</p>${o.slow?'<p class="sub">對手的作答時間比較長，請耐心等一下。</p>':''}</div>`);netTry()}
 function netTry(){if(!net()||!NET.sent||G.over)return;
-  if(NET.role==='host'){if(!NET.oppAct||NET.oppAct.r!==G.round)return;G.acts[1]=NET.oppAct.a;NET.oppAct=null;NET.sent=false;resolvePhase()}
-  else{if(!NET.res||NET.res.r!==G.round)return;const mine=G.acts[1];G.acts=[NET.res.acts[0],Object.assign({},NET.res.acts[1],{q:mine&&mine.q,given:mine&&mine.given})];NET.sent=false;resolvePhase()}}
+  if(NET.role==='host'){if(!NET.oppAct||NET.oppAct.r!==G.round)return;G.acts[1]=NET.oppAct.a;NET.oppAct=null;NET.sent=false;netOpp('');resolvePhase()}
+  else{if(!NET.res||NET.res.r!==G.round)return;const mine=G.acts[0];G.acts=[Object.assign({},NET.res.acts[1],{q:mine&&mine.q,given:mine&&mine.given}),NET.res.acts[0]];NET.sent=false;netOpp('');resolvePhase()}}
 const netSnap=G=>({round:G.round,over:G.over,pending:G.pending,players:G.players.map(p=>({team:p.team.map(u=>({hp:u.hp,charge:u.charge,guard:u.guard})),active:p.active,streak:p.streak,jam:p.jam,chill:p.chill||0,right:p.right,total:p.total,time:p.time}))});
 function netApply(G,sn){G.round=sn.round;G.over=sn.over;G.pending=sn.pending||[];sn.players.forEach((q,i)=>{const p=G.players[i];q.team.forEach((u,k)=>Object.assign(p.team[k],u));p.active=q.active;p.streak=q.streak;p.jam=q.jam;p.chill=q.chill;p.right=q.right;p.total=q.total;p.time=q.time})}
 // 房主算結果並送給對手；對手直接照房主的結果播放，兩邊畫面才會一致
 function netResolve(G,acts){
   if(!net())return resolveRound(G,acts);
-  if(NET.role==='guest'){const r=NET.res;NET.res=null;netApply(G,r.snap);return r.ev}
-  const round=G.round,ev=resolveRound(G,acts);NET.link.send({t:'res',r:round,acts:acts.map(a=>({mi:a.mi,correct:!!a.correct,time:a.time})),ev,snap:netSnap(G)});return ev}
+  if(NET.role==='guest'){const r=NET.res;NET.res=null;netApply(G,netFlipSnap(r.snap));return netFlipEv(r.ev)}
+  const round=G.round,ev=resolveRound(G,acts);NET.link.send({t:'res',r:round,acts:acts.map(netAct),ev,snap:netSnap(G)});return ev}
+// 3 對 3：角色倒下時，自己的由自己選、對手的等對手選
+function netReplace(i,pickUnit,spot){
+  if(i===0){netState('rep');return pickUnit(0).then(k=>{NET.link&&NET.link.send({t:'rep',k});return k})}
+  spot.onclick=null;spot.className='spot pick';spot.innerHTML='<p class="nwait" style="margin:auto">對手正在選下一隻上場…</p>';
+  return new Promise(res=>{if(NET.rep){const k=NET.rep.k;NET.rep=null;return res(k)}NET.repWait=res})}
 /* 對戰 */
 function startBattle(){
   let cf;
@@ -1609,12 +1660,12 @@ const net=()=>!!G&&G.mode==='net';
 function passScreen(text,sub,btn,next){stopTimer();panel(`<div class="center"><p class="big">${text}</p><p class="sub">${sub}</p><button class="btn primary" id="go">${btn}</button></div>`);$('#go').onclick=next}
 
 function roundStart(){G.acts=[null,null];beginRound(G);hud();
-  if(net()){NET.sent=false;return selectPhase(NET.me)}
+  if(net()){NET.sent=false;netState('pick');return selectPhase(0)}
   if(hot())passScreen(`${G.players[0].name} 選招`,'另一位玩家請先不要看螢幕。','開始選招',()=>selectPhase(0));
   else selectPhase(0)}
 const effTag=(m,i)=>{if(!m.el)return '';const e=elemMul(m.el,CHARS[G.players[1-i].char].el);return e>1?'<span class="eff">剋制</span>':e<1?'<span class="eff dn">效果不好</span>':''};
 function afterSelect(i){
-  if(net())return answerPhase(NET.me);
+  if(net()){if(G.acts[0].sw!==undefined)return netSubmit();netState('ans');return answerPhase(0)}
   if(hot()&&i===0)return passScreen(`${G.players[1].name} 選招`,'請把裝置交給下一位玩家。','開始選招',()=>selectPhase(1));
   if(!hot())G.acts[1]=cpuAct(G,1);
   stepAnswer(0)}
@@ -1723,7 +1774,7 @@ async function resolvePhase(){
   if(my!==resToken)return;
   // 倒下的一方選下一隻上場
   const pickUnit=i=>new Promise(res=>{spot.onclick=null;spot.className='spot pick';spot.innerHTML=`<b style="text-align:center">${P[i].name}：選下一隻上場</b><div class="ulist">${unitBtns(i,-1)}</div>`;spot.querySelectorAll('.ubtn').forEach(b=>b.onclick=()=>res(+b.dataset.u))});
-  if(!G.over)for(const i of G.pending){const k=P[i].cpu?cpuReplace(G,i):await pickUnit(i);if(my!==resToken)return;
+  if(!G.over)for(const i of G.pending){const k=P[i].cpu?cpuReplace(G,i):net()?await netReplace(i,pickUnit,spot):await pickUnit(i);if(my!==resToken)return;
     P[i].active=k;setSprite(i);const f=$('#f'+i);f.classList.add('win');setTimeout(()=>f.classList.remove('win'),1000);spot.className='spot';spot.innerHTML=''}
   shown[0]=P[0].hp;shown[1]=P[1].hp;hud();$('#rd').textContent=rdTxt;
   const nx=$('#nx');nx.disabled=false;nx.textContent=G.over?'看結果':'下一回合';
@@ -1731,7 +1782,7 @@ async function resolvePhase(){
 }
 function endScreen(){
   const w=G.over.winner,P=G.players;
-  const title=w<0?'平手':(G.mode==='cpu'?(w===0?'你贏了':'電腦獲勝'):net()?(w===NET.me?'你贏了':'對手獲勝'):`${P[w].name} 獲勝`),humanWin=net()?w===NET.me:(w>=0&&!P[w].cpu);
+  const title=w<0?'平手':(G.mode==='cpu'?(w===0?'你贏了':'電腦獲勝'):net()?(w===0?'你贏了':'對手獲勝'):`${P[w].name} 獲勝`),humanWin=net()?w===0:(w>=0&&!P[w].cpu);
   const st=P.map(p=>({hp:p.team.reduce((a,u)=>a+Math.max(0,u.hp),0),acc:p.total?p.right/p.total:0,t:p.total?p.time/p.total:99}));
   const best=(k,i,lo)=>st[0][k]===st[1][k]?'':((lo?st[i][k]<st[1-i][k]:st[i][k]>st[1-i][k])?'best':'');
   const side=(p,i)=>`<div class="pside ${w<0?'':i===w?'win':'lose'}"><div class="pchars n${p.team.length}">${p.team.map(u=>w<0?`<img src="img/${u.char}.webp" alt="">`:exImg(u.char,i===w&&u.hp>0?'happy':'hurt',u.hp<=0?'dead':'')).join('')}</div>
@@ -1742,12 +1793,12 @@ function endScreen(){
   <div class="podium" style="background-image:url(img/arena_${G.arena}.webp)">${side(P[0],0)}${side(P[1],1)}</div>
   <div class="badges">${grp(0)}${grp(1)}</div>
   <div class="foot"><button class="btn" id="eh">回首頁</button><button class="btn primary" id="ea">同設定再戰</button></div>`;
-  const rv=P.filter((p,pi)=>!p.cpu&&p.miss.length&&(!net()||pi===NET.me)).map(p=>`<div class="review"><h3>${p.name}的錯題筆記</h3>${p.miss.map((q,k)=>`<div style="--i:${k+1}"><span>${q.q.includes('？')?q.q.replace('？',`<mark>${ansHTML(q.a)}</mark>`):`${q.q} → <mark>${ansHTML(q.a)}</mark>`}</span>${q.hint?`<small>提示：${q.hint}</small>`:''}</div>`).join('')}</div>`).join('');
+  const rv=P.filter((p,pi)=>!p.cpu&&p.miss.length&&(!net()||pi===0)).map(p=>`<div class="review"><h3>${p.name}的錯題筆記</h3>${p.miss.map((q,k)=>`<div style="--i:${k+1}"><span>${q.q.includes('？')?q.q.replace('？',`<mark>${ansHTML(q.a)}</mark>`):`${q.q} → <mark>${ansHTML(q.a)}</mark>`}</span>${q.hint?`<small>提示：${q.hint}</small>`:''}</div>`).join('')}</div>`).join('');
   if(rv)$('#s-end .foot').insertAdjacentHTML('beforebegin',rv);
   if(G.mode==='cpu'&&w===1)$('#s-end .sub').insertAdjacentHTML('afterend','<p class="cheer">差一點！看看下面的錯題，再挑戰一次。</p>');
   show('s-end');document.querySelectorAll('#s-end .cnt').forEach(d=>setTimeout(()=>countUp(d,+d.dataset.n),650));
   if(humanWin){sfx('win');confetti()}else sfx('lose');
-  $('#eh').onclick=()=>show('s-title');$('#ea').onclick=()=>{if(net())netReady();else startBattle()};
+  $('#eh').onclick=()=>{if(net())netLeave();show('s-title')};$('#ea').onclick=()=>{if(net())netReady();else startBattle()};
 }
 </script>
 </body>
