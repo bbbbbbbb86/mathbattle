@@ -1104,6 +1104,50 @@ mark .fr{margin:0}
   .pst{min-height:90px}.pmed{padding:10px 20px 4px;gap:26px}.pmed .bdg{width:50px;font-size:16px}.pmed .bitem em{font-size:11px}
   .plose{display:none}#s-end.poster>.foot{padding-block:6px}
 }
+/* ---- 草稿紙 ---- */
+.scb{position:absolute;right:8px;bottom:8px;z-index:2;display:flex;align-items:center;gap:4px;border:2.5px solid var(--ink);border-radius:999px;background:#fff;padding:2px 12px 2px 8px;font-weight:900;font-size:14px;box-shadow:0 3px 0 var(--ink)}
+.scb svg{width:18px;height:18px}
+.scron .scb{background:var(--ink);color:#ffd93b}
+.scr{position:absolute;inset:0;z-index:20;background:#fffdf6;background-image:linear-gradient(rgba(120,160,210,.28) 1px,transparent 1px),linear-gradient(90deg,rgba(120,160,210,.28) 1px,transparent 1px);background-size:24px 24px;animation:spdin .25s ease-out}
+.scr canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
+.scrt{position:absolute;left:50%;top:50%;translate:-50% -50%;font-weight:800;color:#c9b48a;pointer-events:none;white-space:nowrap;font-size:clamp(14px,2.4vh,20px)}
+.scr.used .scrt{display:none}
+.scrbar{position:absolute;right:8px;top:8px;display:flex;gap:6px}
+.scrbar button{border:2.5px solid var(--ink);border-radius:999px;background:#fff;font-weight:900;font-size:14px;padding:3px 14px;box-shadow:0 3px 0 var(--ink)}
+@media (orientation:portrait),(max-width:639px){
+  #s-battle.scron .huds{display:none}
+  #s-battle.scron .stage{aspect-ratio:auto;max-height:none;height:clamp(150px,calc(100dvh - 545px),460px)}
+}
+/* ---- 直式答題：場地自動縮小，把空間讓給題目和鍵盤 ---- */
+@media (orientation:portrait),(max-width:639px){
+  #s-battle:has(#pad):not(.scron) .stage{aspect-ratio:auto;height:clamp(0px,calc(100dvh - 590px),42vh);max-height:none;transition:height .25s}
+  #s-battle:has(#pad) .panel{flex:1 1 auto;min-height:0}
+  #s-battle:has(#pad) #pad{min-height:204px}
+  #s-battle:has(#pad) #pad button{min-height:44px}
+}
+@media (orientation:portrait) and (max-height:720px),(max-width:639px) and (max-height:720px){
+  #s-battle:has(#pad) .qbox{padding:14px 10px 10px;margin-top:6px}
+  #s-battle:has(#pad) .qbox::before,#s-battle:has(#pad) .qbox::after{display:none}
+  #s-battle:has(#pad) .hud{padding-block:3px}
+  #s-battle:has(#pad) .panel{gap:6px;padding-top:6px}
+}
+/* ---- 開房間的設定摘要 ---- */
+.nsum{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;flex:none}
+.nsum span{border:2.5px solid var(--ink);border-radius:999px;background:#fff;padding:2px 14px;font-weight:900;font-size:clamp(13px,2vh,17px);box-shadow:0 3px 0 var(--ink)}
+.nsum span:nth-child(odd){rotate:-1.5deg;background:#ffd93b}.nsum span:nth-child(even){rotate:1.5deg}
+/* ---- 手機橫放：數字鍵改成兩排，不會被壓扁 ---- */
+@media (orientation:landscape) and (min-width:640px) and (max-height:520px){
+  .panel:has(>#pad)>.qbox{flex:1 1 0;min-height:58px;margin-top:8px;padding:8px 8px 6px;display:flex;flex-direction:column;justify-content:center}
+  .panel:has(>#pad)>.qbox .ans{margin-top:4px;min-height:1.3em;line-height:1.3}
+  .panel:has(>#pad)>#pad{flex:0 0 auto;min-height:0;max-height:none;grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:repeat(2,clamp(38px,13vh,54px));gap:5px;padding:6px}
+  #pad .del{grid-column:6;grid-row:1}#pad .ok{grid-column:6;grid-row:2}
+  #pad.x{grid-template-columns:repeat(7,minmax(0,1fr))!important}
+  #pad.x .xk{grid-column:6;grid-row:1;font-size:0;gap:0}#pad.x .xk b{font-size:24px}
+  #pad.x .del{grid-column:7;grid-row:1}#pad.x .ok{grid-column:6/8;grid-row:2}
+  #pad.x [data-n="0"]{grid-column:auto;grid-row:auto}
+  .fhint{display:none}.scb{font-size:12px;padding:1px 9px 1px 6px;bottom:4px;right:4px}
+  .qbox::before,.qbox::after{display:none}
+}
 /* ---- 首頁：圖鑑入口、掃碼 ---- */
 .tdex{position:absolute;top:10px;left:10px;z-index:5;display:flex;align-items:center;gap:4px;border:3px solid var(--ink);background:#ffd93b;border-radius:14px 18px 13px 17px;padding:2px 14px 2px 4px;box-shadow:0 4px 0 var(--ink);rotate:-3deg;font-size:16px}
 .tdex img{width:46px;height:46px;object-fit:contain;animation:gbob 1.8s ease-in-out infinite}
@@ -1950,7 +1994,8 @@ function startSetup(mode){
        {name:mode==='cpu'?'電腦':'玩家 2',grade:5,unit:'calc',char:null,moves:[]}]};
   buildSteps();show('s-setup');renderSetup()}
 function buildSteps(){const c=S.mode==='cpu';
-  if(S.mode==='net'){const h=NET.role==='host';S.fmt=NET.fmt;const pre=NET.teacher?[]:(h?['grade0','arena']:['grade0']);S.steps=[...pre,...(S.fmt===3?['draft','team0']:['char0','moves0'])];return}
+  if(S.mode==='net'&&S.pre){NET.fmt=S.fmt;S.steps=['grade0','arena'];return}
+  if(S.mode==='net'){const h=NET.role==='host';S.fmt=NET.fmt;const pre=NET.teacher?[]:(h?(NET.pre?[]:['grade0','arena']):['grade0']);S.steps=[...pre,...(S.fmt===3?['draft','team0']:['char0','moves0'])];return}
   S.steps=S.fmt===3?(c?['grade0','arena','draft','team0']:['grade0','grade1','arena','draft','team0','team1'])
     :(c?['grade0','arena','char0','moves0']:['grade0','grade1','arena','char0','moves0','pass','char1','moves1'])}
 function renderSetup(){
@@ -1961,7 +2006,7 @@ function renderSetup(){
   if(view.startsWith('grade')){
     const masc=i===0?'crane':'cat';if(UNITS[p.unit].from>p.grade)p.unit='calc';
     body=h`<h2>${p.name}：選年級與單元</h2>${stepTxt}
-    ${i===0&&S.mode!=='net'?`<div class="ftix"><button class="ftk ${S.fmt===1?'sel':''}" data-k="fmt" data-v="1"><span class="fvs"><img src="img/crane.webp" alt=""><i>VS</i><img class="r" src="img/cat.webp" alt=""></span><b>單挑</b><small>1 對 1，節奏快</small></button>
+    ${i===0&&(S.mode!=='net'||S.pre)?`<div class="ftix"><button class="ftk ${S.fmt===1?'sel':''}" data-k="fmt" data-v="1"><span class="fvs"><img src="img/crane.webp" alt=""><i>VS</i><img class="r" src="img/cat.webp" alt=""></span><b>單挑</b><small>1 對 1，節奏快</small></button>
       <button class="ftk ${S.fmt===3?'sel':''}" data-k="fmt" data-v="3"><span class="fvs t3"><span><img src="img/lion.webp" alt=""><img src="img/octopus.webp" alt=""><img src="img/chameleon.webp" alt=""></span><i>VS</i><span class="r"><img src="img/owl.webp" alt=""><img src="img/stego.webp" alt=""><img src="img/beetle.webp" alt=""></span></span><b>3 對 3</b><small>輪流選角，可以換人</small></button></div>`:''}
     <div class="gruler"><span class="glab">年級</span>${[1,2,3,4,5,6,7].map(g=>`<button class="gt ${p.grade===g?'sel':''}" data-k="grade" data-v="${g}" aria-label="${g===7?'挑戰級':g+' 年級'}"><b>${g===7?'★':g}</b></button>`).join('')}<span class="gm" id="gm" style="left:${4+(p.grade-.5)*92/7}%"><em>${p.grade===7?'挑戰級':p.grade+' 年級'}</em><img src="img/${masc}.webp" alt=""></span></div>
     <div class="boards">${Object.entries(UNITS).map(([k,u])=>{const b=boardInfo(k,p.grade);return `<button class="board ${p.unit===k?'sel':''} ${b.na?'na':''}" data-k="unit" data-v="${k}" ${b.na?'disabled':''}><span class="chalk" data-u="${k}"><span>${b.ex}</span></span><b>${u.n}</b><small data-s="${k}">${b.std}</small></button>`}).join('')}</div>
@@ -2005,7 +2050,7 @@ function renderSetup(){
     body=h`<div class="center"><p class="big">請把裝置交給玩家 2</p><p class="sub">玩家 1 的角色與招式先保密。</p></div>`;
   }
   const last=S.step===S.steps.length-1;
-  el.innerHTML=body+`<div class="foot"><button class="btn" id="sb">上一步</button><button class="btn primary" id="sn" ${ok?'':'disabled'}>${editing?'完成':(last?(S.mode==='net'?'準備好了':'開戰'):'下一步')}</button></div>`;
+  el.innerHTML=body+`<div class="foot"><button class="btn" id="sb">上一步</button><button class="btn primary" id="sn" ${ok?'':'disabled'}>${editing?'完成':(last?(S.pre?'開房間':S.mode==='net'?'準備好了':'開戰'):'下一步')}</button></div>`;
   el.scrollTop=el._keep||0;el._keep=0;
   el.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{
     const k=b.dataset.k,v=b.dataset.v;
@@ -2044,8 +2089,8 @@ function renderSetup(){
       $('#ted').dataset.v=k;$('#tld').dataset.v=k;$('#tld').style.visibility=k?'visible':'hidden';
       el.querySelectorAll('.lu').forEach(b=>{const on=+b.dataset.j===k;b.classList.toggle('sel',on);if(on&&hop){b.classList.remove('hop');void b.offsetWidth;b.classList.add('hop')}})};
     el.querySelectorAll('.lu').forEach(b=>b.onclick=()=>pickT(+b.dataset.j,true));pickT(S.tf,false)}
-  $('#sb').onclick=()=>{S.focus=0;if(editing){S.edit=null;renderSetup();return}S.tf=0;if(S.step===0){if(S.mode==='net')netLeave('你離開了房間');show('s-title')}else{S.step--;renderSetup()}};
-  $('#sn').onclick=()=>{S.focus=0;if(editing){S.edit=null;renderSetup();return}S.tf=0;if(last){if(S.mode==='net')netReady();else startBattle()}else{S.step++;renderSetup()}};
+  $('#sb').onclick=()=>{S.focus=0;if(editing){S.edit=null;renderSetup();return}S.tf=0;if(S.step===0){if(S.pre){netLeave();return netLobby()}if(S.mode==='net')netLeave('你離開了房間');show('s-title')}else{S.step--;renderSetup()}};
+  $('#sn').onclick=()=>{S.focus=0;if(editing){S.edit=null;renderSetup();return}S.tf=0;if(last){if(S.pre)netOpenRoom();else if(S.mode==='net')netReady();else startBattle()}else{S.step++;renderSetup()}};
 }
 
 const boardInfo=(k,g)=>{const na=(UNITS[k].from||1)>g;let ex='';if(!na){try{ex=makeQuestion(k,g,1).q}catch(e){}}return {na,ex:na?'三年級開始':ex,std:na?'':(STD[k][g]||'')}};
@@ -2090,16 +2135,21 @@ function netLobby(){netLeave();show('s-setup');const el=$('#s-setup');
   <div class="foot"><button class="btn" id="nb">回首頁</button></div>`;
   $('#nb').onclick=()=>show('s-title');$('#nh').onclick=()=>netHost();$('#nj').onclick=netJoin;$('#nt').onclick=()=>teachRoom()}
 function netHandlers(){return {onData:netMsg,onClose:netDropped}}
-function netHost(tries=0,fmt=1){const code=String(1000+Math.floor(Math.random()*9000)),el=$('#s-setup');NET.role='host';NET.seat=0;NET.teacher=false;NET.fmt=fmt;NET.code=code;
-  el.innerHTML=`<h2>開房間</h2><p class="sub">先選對戰形式，再把密碼告訴對手，等他加入。</p>
-  <div class="nfmt" id="nfmt"><button data-f="1" class="${fmt===1?'on':''}"><b>單挑</b><small>1 對 1</small></button><button data-f="3" class="${fmt===3?'on':''}"><b>3 對 3</b><small>輪流選角、可換人</small></button></div>
+function netHost(){NET.role='host';NET.seat=0;NET.teacher=false;NET.fmt=NET.fmt||1;NET.pre=null;
+  S={mode:'net',pre:true,step:0,fmt:NET.fmt,arena:'standard',cpuLevel:'normal',team:[[],[]],draft:null,edit:null,alt:false,
+    p:[{name:'你',grade:5,unit:'calc',char:null,moves:[]},{name:'對手',grade:5,unit:'calc',char:null,moves:[]}]};
+  buildSteps();show('s-setup');renderSetup()}
+function netOpenRoom(tries=0){const code=String(1000+Math.floor(Math.random()*9000)),el=$('#s-setup'),p0=S.p[0];
+  if(S.pre)NET.pre={grade:p0.grade,unit:p0.unit,slow:!!p0.slow,arena:S.arena,alt:!!S.alt};
+  const q=NET.pre;NET.role='host';NET.seat=0;NET.teacher=false;NET.code=code;S.pre=false;
+  el.innerHTML=`<h2>房間開好了</h2><p class="sub">把密碼告訴對手，等他加入。</p>
+  <div class="nsum"><span>${NET.fmt===3?'3 對 3':'單挑'}</span><span>${q.grade>6?'挑戰級':q.grade+' 年級'}・${UNITS[q.unit].n}</span><span>場地：${q.arena==='random'?'隨機':ARENAS[q.arena].n}</span></div>
   <div class="center"><div class="ncode" id="ncode">${[...code].map((d,k)=>`<b style="--k:${k}">${d}</b>`).join('')}</div><p class="nwait" id="nst">正在開房間…</p><img class="netpic" src="img/owl.webp" alt=""></div>
   <div class="foot"><button class="btn" id="nb">取消</button></div>`;
-  $('#nfmt').onclick=e=>{const b=e.target.closest('button');if(!b)return;NET.fmt=+b.dataset.f;$('#nfmt').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))};
   $('#nb').onclick=()=>{netLeave();netLobby()};
   NET.link=netOpen('host',code,Object.assign(netHandlers(),{onListen:()=>{const t=$('#nst');if(t)t.textContent='等待對手加入…'},
-    onOpen:()=>{sfx('switch');NET.link.send({t:'cfg',fmt:NET.fmt,seat:1});netSetup()},
-    onError:m=>{if(m==='ID_TAKEN'&&tries<5){try{NET.link.close()}catch(e){}NET.link=null;return netHost(tries+1,NET.fmt)}const t=$('#nst');if(t){t.textContent=m==='ID_TAKEN'?'房間密碼剛好被用走了，請再試一次。':m;t.classList.add('err')}}}));
+    onOpen:()=>{sfx('switch');NET.link.send({t:'cfg',fmt:NET.fmt,seat:1,grade:q.grade,unit:q.unit});netSetup()},
+    onError:m=>{if(m==='ID_TAKEN'&&tries<5){try{NET.link.close()}catch(e){}NET.link=null;return netOpenRoom(tries+1)}const t=$('#nst');if(t){t.textContent=m==='ID_TAKEN'?'房間密碼剛好被用走了，請再試一次。':m;t.classList.add('err')}}}));
   if(NETTEST){const t=$('#nst');if(t)t.textContent='等待對手加入…'}}
 function netJoin(){const el=$('#s-setup');let val='';
   el.innerHTML=`<h2>加入房間</h2><p class="sub">輸入房主畫面上的 4 位數密碼。</p>
@@ -2115,6 +2165,8 @@ function netJoin(){const el=$('#s-setup');let val='';
 function netSetup(){NET.cfg=[null,null];NET.ready=false;
   S={mode:'net',step:0,fmt:NET.fmt,arena:'standard',cpuLevel:'normal',team:[[],[]],draft:null,edit:null,alt:false,
     p:[{name:'你',grade:5,unit:'calc',char:null,moves:[]},{name:'對手',grade:5,unit:'calc',char:null,moves:[]}]};
+  if(NET.role==='host'&&NET.pre&&!NET.teacher){const q=NET.pre;S.p[0].grade=q.grade;S.p[0].unit=q.unit;S.p[0].slow=q.slow;S.arena=q.arena;S.alt=q.alt}
+  if(NET.role==='guest'&&NET.dflt){S.p[0].grade=NET.dflt.grade;S.p[0].unit=NET.dflt.unit}
   if(NET.fmt===3)S.draft={order:NET.seat===1?[1,0,0,1,1,0]:[0,1,1,0,0,1],turn:0,focus:Object.keys(CHARS)[0]};
   buildSteps();show('s-setup');renderSetup()}
 function netReady(){const p=S.p[0],srt=m=>[...m].sort((a,b)=>a-b);
@@ -2139,7 +2191,7 @@ const OPPST={pick:'選招中…',ans:'作答中…',done:'已完成 ✓',rep:'�
 function netOpp(st){NET.oppSt=st;const t=$('#oppst');if(t){t.hidden=!st;t.textContent='對手'+(OPPST[st]||'');t.classList.toggle('ok',st==='done')}const w=$('#wst');if(w)w.textContent=st==='done'?'對手也完成了！':'對手'+(OPPST[st]||'作答中…')}
 function netState(st){try{NET.link&&NET.link.send({t:'st',s:st})}catch(e){}}
 function netMsg(m){if(!m||!NET.link)return;
-  if(m.t==='cfg'){if(NET.role==='guest'){NET.fmt=m.fmt||1;NET.seat=m.seat===0?0:1;NET.teacher=!!m.teacher;netSetup()}}
+  if(m.t==='cfg'){if(NET.role==='guest'){NET.fmt=m.fmt||1;NET.seat=m.seat===0?0:1;NET.teacher=!!m.teacher;NET.dflt=m.grade?{grade:m.grade,unit:m.unit||'calc'}:null;netSetup()}}
   else if(m.t==='again'){if(NET.teacher&&S&&S.mode==='net')netReady()}
   else if(m.t==='tf'){if(net()){const p=G.players[m.seat===NET.seat?0:1];p.tf=m.tf;hud()}}
   else if(m.t==='dp'){if(S&&S.mode==='net'&&S.draft&&S.draft.turn<6&&S.draft.order[S.draft.turn]===1){S.team[1].push({name:CHARS[m.c].n,char:m.c,moves:recoMoves(m.c)});S.draft.turn++;
@@ -2299,7 +2351,7 @@ function runTimer(sec,onEnd){
   tick=setInterval(upd,100);upd();
   return ()=>(performance.now()-t0)/1000}
 const LAND=matchMedia('not all'); // 橫向左右分欄已停用，維持上下排列
-const panel=html=>{const pn=$('#panel'),dk=$('#desk');pn.innerHTML=html;pn.scrollTop=0;dk.innerHTML='';
+const panel=html=>{scrOff();const pn=$('#panel'),dk=$('#desk');pn.innerHTML=html;pn.scrollTop=0;dk.innerHTML='';
   if(LAND.matches)pn.querySelectorAll('.qbox,.spot').forEach(e=>dk.appendChild(e));
   if(!dk.children.length&&G)dk.innerHTML=`<div class="anote"><b>場地｜${ARENAS[G.arena].n}</b>${ARENAS[G.arena].rule}</div>`};
 const hot=()=>G.mode==='hot';
@@ -2344,12 +2396,25 @@ function selectPhase(i){
     hd.querySelectorAll('.ubtn').forEach(b=>b.onclick=()=>choose({sw:+b.dataset.u}));$('#swx').onclick=()=>selectPhase(i)};
   runTimer(SELECT_SEC*tmul(),()=>choose(up??p.moves.find(mi=>canUse(p,mi))));
 }
+// 草稿紙：答題時把上方場地換成可以用手指寫字的紙
+function scrOff(){const s=$('#scr');if(s)s.remove();const b=$('#s-battle');if(b)b.classList.remove('scron')}
+function scrOn(){if($('#scr'))return scrOff();const st=$('#stage');$('#s-battle').classList.add('scron');
+  st.insertAdjacentHTML('beforeend','<div class="scr" id="scr"><canvas></canvas><span class="scrt">草稿紙：用手指或滑鼠寫</span><div class="scrbar"><button id="scc">清除</button><button id="scx">收起</button></div></div>');
+  const box=$('#scr'),cv=box.querySelector('canvas'),cx=cv.getContext('2d');let dr=false,lx=0,ly=0,dpr=Math.min(2,window.devicePixelRatio||1);
+  const fit=()=>{const r=box.getBoundingClientRect();if(!r.width)return;let old=null;try{if(cv.width)old=cx.getImageData(0,0,cv.width,cv.height)}catch(e){}cv.width=Math.round(r.width*dpr);cv.height=Math.round(r.height*dpr);if(old)cx.putImageData(old,0,0);cx.lineCap='round';cx.lineJoin='round';cx.lineWidth=3.2*dpr;cx.strokeStyle='#33261f'};
+  requestAnimationFrame(()=>requestAnimationFrame(fit));
+  const pos=e=>{const r=cv.getBoundingClientRect();return [(e.clientX-r.left)*dpr,(e.clientY-r.top)*dpr]};
+  cv.onpointerdown=e=>{e.preventDefault();if(!cv.width)fit();dr=true;[lx,ly]=pos(e);try{cv.setPointerCapture(e.pointerId)}catch(_){ }cx.beginPath();cx.arc(lx,ly,1.6*dpr,0,7);cx.fillStyle='#33261f';cx.fill();box.classList.add('used')};
+  cv.onpointermove=e=>{if(!dr)return;e.preventDefault();const [x,y]=pos(e);cx.beginPath();cx.moveTo(lx,ly);cx.lineTo(x,y);cx.stroke();lx=x;ly=y};
+  cv.onpointerup=cv.onpointercancel=()=>{dr=false};
+  $('#scc').onclick=()=>{cx.clearRect(0,0,cv.width,cv.height);box.classList.remove('used')};$('#scx').onclick=scrOff}
 function answerPhase(i){
   const p=G.players[i],m=CHARS[p.char].moves[G.acts[i].mi],diff=TYPES[m.type].diff,limit=(answerLimit(p)+(p.unit==='frac'?6:0))*tmul()*(p.tf||1);
   const qu=makeQuestion(p.unit,p.grade,diff);let val='',done=false;
   panel(`<div class="phead"><b>${p.name}・${m.n} <span class="chip">${DIFFN[diff]}</span></b><span class="sec" id="ts"></span></div><div class="tbar"><div id="tb"></div></div>
-  <div class="qbox"><div class="q">${qu.q}</div><div class="ans" id="ans"></div>${typeof qu.a==='object'?'<small class="fhint">先按分子 → ／ → 再按分母</small>':''}</div>
+  <div class="qbox"><div class="q">${qu.q}</div><div class="ans" id="ans"></div>${typeof qu.a==='object'?'<small class="fhint">先按分子 → ／ → 再按分母</small>':''}<button class="scb" id="scb" aria-label="打開草稿紙"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" d="M4 20l1.200-4.800L16.500 3.900a2 2 0 0 1 2.800 0l.8.8a2 2 0 0 1 0 2.800L8.800 18.800z M14.500 6l3.500 3.500"/></svg>草稿</button></div>
   <div class="pad" id="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-n="${n}">${n}</button>`).join('')}<button class="del" data-n="del">刪除</button><button data-n="0">0</button><button class="ok" data-n="ok">送出</button>${p.unit==='frac'?'<button class="xk" data-n="/"><b>／</b>分數線</button>':p.unit==='dec'?'<button class="xk" data-n="."><b>．</b>小數點</button>':''}</div>`);
+  $('#scb').onclick=scrOn;
   if(p.unit==='frac'||p.unit==='dec')$('#pad').classList.add('x');
   const elapsed=runTimer(limit,()=>finish(true));
   function finish(timeout){if(done)return;done=true;stopTimer();document.removeEventListener('keydown',onKey);
@@ -2431,7 +2496,8 @@ async function resolvePhase(){
   shown[0]=P[0].hp;shown[1]=P[1].hp;hud();$('#rd').textContent=rdTxt;
   const nx=$('#nx');nx.disabled=false;nx.textContent=G.over?'看結果':'下一回合';
   if(watch()&&!G.over)setTimeout(()=>{if(my===resToken&&watch())nx.click()},1100);
-  nx.onclick=()=>{$('#s-battle').classList.remove('show');clearMarks();G.over?endScreen():roundStart()};
+  nx.onclick=()=>{clearTimeout(NET.nxT);$('#s-battle').classList.remove('show');clearMarks();G.over?endScreen():roundStart()};
+  if(net()){let left=G.over?8:6;const lab=nx.textContent,tk=()=>{if(my!==resToken||!document.body.contains(nx)||!net())return;if(left<=0)return nx.click();nx.textContent=`${lab}（${left}）`;left--;NET.nxT=setTimeout(tk,1000)};clearTimeout(NET.nxT);tk()}
 }
 function endScreen(){
   const w=G.over.winner,P=G.players;
