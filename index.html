@@ -1692,7 +1692,9 @@ function bgmTick(){const sg=SONGS[BGM.kind];if(!sg||!AC)return;const dt=60/sg.bp
     BGM.step++;BGM.next+=dt}}
 // 配樂：優先播放 snd/ 裡的音檔（Suno 生成），檔案載不到時退回合成旋律
 const TRK={};let TRKOFF=false,TRKVOL={menu:.34,battle:.26,win:.5};
-function trk(k){if(TRKOFF)return null;if(!TRK[k]){const a=new Audio('snd/'+k+'.mp3');a.preload='auto';a.loop=k!=='win';a.volume=TRKVOL[k]||.3;a.addEventListener('error',()=>{TRKOFF=true;trkStop();bgm(BGM.want)});TRK[k]=a}return TRK[k]}
+const TRKDIR=['snd/',''];let TRKD=0;
+function trk(k){if(TRKOFF)return null;if(!TRK[k]){const a=new Audio(TRKDIR[TRKD]+k+'.mp3');a.preload='auto';a.loop=k!=='win';a.volume=TRKVOL[k]||.3;
+  a.addEventListener('error',()=>{if(TRKD<TRKDIR.length-1){TRKD++;const w=BGM.want;trkStop();for(const x in TRK)delete TRK[x];BGM.kind=null;bgm(w)}else{TRKOFF=true;trkStop();bgm(BGM.want)}});TRK[k]=a}return TRK[k]}
 function trkStop(except){for(const k in TRK)if(k!==except){try{TRK[k].pause()}catch(e){}}}
 function synStop(){if(BGM.timer){clearInterval(BGM.timer);BGM.timer=null}}
 function bgm(kind){BGM.want=kind;
