@@ -2160,7 +2160,7 @@ function netOpen(role,code,h){
     bc.onmessage=e=>{const d=e.data;if(d.from===id||d.role===role)return;if(d.to&&d.to!==id)return;
       if(d.hi){if(role==='host'){const fresh=peerId!==d.from;peerId=d.from;bc.postMessage({from:id,role,to:peerId,hi:1});if(fresh){up=true;h.onOpen()}return}if(!d.to)return;peerId=d.from;if(!up){up=true;clearInterval(hello);h.onOpen()}return}
       if(d.from!==peerId)return;if(d.bye){if(role==='host')peerId=null;h.onClose();return}h.onData(d.o)};
-    if(role==='guest'){let n=0;hello=setInterval(()=>{if(up)return;if(++n>12){clearInterval(hello);h.onError('找不到這個房間，請確認密碼。');return}bc.postMessage({from:id,role,hi:1})},400)}
+    if(role==='guest'){let n=0;hello=setInterval(()=>{if(up)return;if(++n>12){clearInterval(hello);h.onError('找不到這個房間，請確認密碼。');return}bc.postMessage({from:id,role,hi:1,seat:h.seat})},400)}
     return L}
   let peer,conn=null,closed=false;const L={send:o=>{try{conn&&conn.open&&conn.send(o)}catch(e){}},close:()=>{closed=true;try{conn&&conn.close()}catch(e){}try{peer&&peer.destroy()}catch(e){}}};
   const bind=c=>{const old=conn;conn=c;if(old&&old!==c){try{old.close()}catch(e){}}c.on('open',()=>{if(conn===c)h.onOpen()});c.on('data',d=>{if(conn===c)h.onData(d)});const cl=()=>{if(!closed&&conn===c){conn=null;h.onClose()}};c.on('close',cl);c.on('error',cl)};
@@ -2168,7 +2168,7 @@ function netOpen(role,code,h){
     if(role==='host'){peer=new Peer(PID(code));peer.on('open',()=>h.onListen&&h.onListen());peer.on('connection',c=>bind(c));peer.on('disconnected',()=>{if(!closed){try{peer.reconnect()}catch(e){}}});
       peer.on('error',e=>{if(closed)return;h.onError(e&&e.type==='unavailable-id'?'ID_TAKEN':'連線服務出了問題（'+(e&&e.type||'未知')+'），請稍後再試。')})}
     else{peer=new Peer();const to=setTimeout(()=>{if(!conn||!conn.open)h.onError('連線逾時。請確認兩台裝置都能上網，再試一次。')},15000);
-      peer.on('open',()=>bind(peer.connect(PID(code),{reliable:true})));
+      peer.on('open',()=>bind(peer.connect(PID(code),{reliable:true,metadata:{seat:h.seat}})));
       peer.on('error',e=>{if(closed)return;clearTimeout(to);h.onError(e&&e.type==='peer-unavailable'?'找不到這個房間，請確認密碼。':'連線服務出了問題（'+(e&&e.type||'未知')+'），請稍後再試。')})}
   }catch(e){setTimeout(()=>h.onError('這個瀏覽器不支援連線對戰。'),0)}
   return L}
@@ -2185,31 +2185,33 @@ function netLobby(){netLeave();show('s-setup');const el=$('#s-setup');
 function netHandlers(){return {onData:netRx,onClose:netLost}}
 /* ---- 斷線後回到房間：房主每回合開始存檔；有人斷線時雙方暫停，連回來後從這一回合重新開始 ---- */
 const ROOMKEY='mathbattle-room',RST=()=>NETTEST?sessionStorage:localStorage;   // 測試時兩個分頁共用 localStorage，所以改用各分頁自己的 sessionStorage
-function roomSave(){if(NET.teacher||!NET.role)return;try{RST().setItem(ROOMKEY,JSON.stringify({code:NET.code,role:NET.role,fmt:NET.fmt,pre:NET.pre,ck:NET.role==='host'?NET.ck:null,t:Date.now()}))}catch(e){}}
+function roomSave(){if(!NET.role||NET.role==='teacher')return;try{RST().setItem(ROOMKEY,JSON.stringify({code:NET.code,role:NET.role,fmt:NET.fmt,teacher:!!NET.teacher,seat:NET.seat,pre:NET.pre,ck:NET.role==='host'?NET.ck:null,t:Date.now()}))}catch(e){}}
 function roomClear(){try{RST().removeItem(ROOMKEY)}catch(e){}rejoinDraw()}
 function roomGet(){try{const r=JSON.parse(RST().getItem(ROOMKEY)||'null');return r&&r.code&&Date.now()-r.t<10*60000?r:null}catch(e){return null}}
 function rejoinDraw(){const b=$('#btn-rejoin');if(!b)return;const r=NET.link?null:roomGet();b.hidden=!r;if(r)$('#rejoin-s').textContent=`剛才的連線對戰・密碼 ${r.code}`}
 let lostT=null;
 function lostHide(){clearInterval(lostT);lostT=null;const m=$('#lostm');if(m)m.classList.remove('on')}
-function lostShow(title,sub,sec){clearInterval(lostT);$('#lost-t').textContent=title;$('#lost-s').textContent=sub;$('#lostm').classList.add('on');let left=sec||90;const c=$('#lost-c'),tk=()=>{c.textContent=`最多再等 ${left} 秒`;if(left--<=0){lostHide();NET.lost=false;netDropped()}};tk();lostT=setInterval(tk,1000);
-  $('#lost-x').onclick=()=>{lostHide();netLeave();show('s-title')}}
+function lostShow(title,sub,sec,onEnd,onQuit,quitLabel){clearInterval(lostT);$('#lost-t').textContent=title;$('#lost-s').textContent=sub;$('#lost-x').textContent=quitLabel||'離開房間';$('#lostm').classList.add('on');let left=sec||90;
+  const c=$('#lost-c'),tk=()=>{c.textContent=`最多再等 ${left} 秒`;if(left--<=0){if(onEnd)return onEnd();lostHide();NET.lost=false;netDropped()}};tk();lostT=setInterval(tk,1000);
+  $('#lost-x').onclick=onQuit||(()=>{lostHide();netLeave();show('s-title')})}
 function netRx(m){NET.rx=Date.now();if(!m||m.t==='hb'||m.t==='back')return;
   if(m.t==='re'){if(NET.role==='guest'&&!NET.lost)netLost();return}
+  if(m.t==='pause'){if(!NET.lost){NET.lost=true;stopTimer();resToken++;clearTimeout(NET.nxT);lostShow('對手斷線了','等他回到房間，回來後會從這一回合重新開始。',100)}return}
   if(m.t==='resume')return netResume(m);
   if(m.t==='cfg'&&NET.lost){lostHide();NET.lost=false}
   netMsg(m)}
-function netLost(){if(!NET.link)return;if(NET.teacher||!NET.live)return netDropped();if(NET.lost)return;NET.lost=true;stopTimer();resToken++;clearTimeout(NET.nxT);
+function netLost(){if(!NET.link)return;if(!NET.live)return netDropped();if(NET.lost)return;NET.lost=true;stopTimer();resToken++;clearTimeout(NET.nxT);
   if(NET.role==='host'){try{NET.link.send({t:'re'})}catch(e){}lostShow('對手斷線了','等他回到房間，回來後會從這一回合重新開始。')}
   else{lostShow('連線中斷了','正在重新連線，連上後會從這一回合重新開始。');netRetry()}}
 function netRetry(){const code=NET.code;let n=0;const go=()=>{if(!NET.lost||NET.role!=='guest')return;if(++n>24){lostHide();NET.lost=false;return netDropped()}
     try{NET.link&&NET.link.close()}catch(e){}let done=false;
-    const L=netOpen('guest',code,{onData:m=>{if(NET.link===L)netRx(m)},onClose:()=>{if(NET.link===L)netLost()},onOpen:()=>{if(done||NET.link!==L)return;done=true;NET.rx=Date.now();L.send({t:'back'})},
+    const L=netOpen('guest',code,{seat:NET.teacher?NET.seat:undefined,onData:m=>{if(NET.link===L)netRx(m)},onClose:()=>{if(NET.link===L)netLost()},onOpen:()=>{if(done||NET.link!==L)return;done=true;NET.rx=Date.now();L.send({t:'back'})},
       onError:()=>{if(done||NET.link!==L)return;done=true;try{L.close()}catch(e){}setTimeout(go,3000)}});NET.link=L};go()}
 function netBack(){lostHide();NET.lost=false;NET.live=true;NET.rx=Date.now();sfx('switch');
   if(NET.ck&&NET.ck.g){const m={t:'resume',start:NET.ck.start,g:NET.ck.g};NET.link.send(m);netResume(m)}
   else{const q=NET.pre||{};NET.link.send({t:'cfg',fmt:NET.fmt,seat:1,grade:q.grade,unit:q.unit});netSetup()}}
 function netCk(){if(!NET.ck)return;NET.ck.g=JSON.parse(JSON.stringify({round:G.round,players:G.players}));roomSave()}
-function netResume(m){lostHide();NET.lost=false;NET.live=true;NET.rx=Date.now();const mine=NET.seat,st=m.start,old=net()?G:null;
+function netResume(m){lostHide();NET.lost=false;NET.live=true;NET.rx=Date.now();if(m.teacher){NET.seat=m.seat;NET.teacher=true}const mine=NET.seat,st=m.start,old=net()?G:null;
   const cf=[st.cf[mine],st.cf[1-mine]].map((c,i)=>Object.assign({},c,{name:i===0?'你':'對手'}));
   resToken++;stopTimer();clearTimeout(NET.nxT);document.querySelectorAll('.vsfs,.sw,.fst,.spd').forEach(e=>e.remove());$('#s-battle').classList.remove('show');
   G=newGame('net',st.arena,cf,st.fmt||1);G.alt=st.alt;G.round=m.g.round;
@@ -2218,11 +2220,11 @@ function netResume(m){lostHide();NET.lost=false;NET.live=true;NET.rx=Date.now();
   NET.ck={start:st,g:m.g};NET.cfg=[null,null];NET.ready=false;NET.oppAct=null;NET.res=null;NET.rep=null;NET.repWait=null;NET.sent=false;roomSave();
   $('#stage').style.backgroundImage=`url(img/arena_${G.arena}.webp)`;$('#arena-name').textContent=ARENAS[G.arena].n;setSprite(0);setSprite(1);show('s-battle');hud();
   passScreen('連線恢復了！',`從第 ${G.round} 回合重新開始。`,'繼續對戰',roundStart);setTimeout(()=>{const g=$('#go');if(g&&g.textContent==='繼續對戰')g.click()},2200)}
-function netRejoin(){const r=roomGet();if(!r||NET.link)return;const host=r.role==='host';NET.role=r.role;NET.code=r.code;NET.fmt=r.fmt||1;NET.teacher=false;NET.seat=host?0:1;NET.pre=r.pre||null;NET.ck=r.ck||null;NET.live=true;NET.lost=true;NET.rx=Date.now();G=null;
+function netRejoin(){const r=roomGet();if(!r||NET.link)return;const host=r.role==='host';NET.role=r.role;NET.code=r.code;NET.fmt=r.fmt||1;NET.teacher=!!r.teacher;NET.seat=r.teacher?(r.seat||0):(host?0:1);NET.pre=r.pre||null;NET.ck=r.ck||null;NET.live=true;NET.lost=true;NET.rx=Date.now();G=null;
   $('#btn-rejoin').hidden=true;lostShow('回到房間 '+r.code,host?'等對手連回來…':'正在重新連線…');
   if(host){let tries=0;const open=()=>{if(!NET.lost)return;NET.link=netOpen('host',r.code,{onData:netRx,onClose:netLost,onOpen:netBack,onError:m=>{try{NET.link&&NET.link.close()}catch(e){}if(m==='ID_TAKEN'&&tries++<12)return setTimeout(open,2500);lostHide();NET.lost=false;netDropped()}})};open()}
   else{NET.link={send(){},close(){}};netRetry()}}
-setInterval(()=>{if(!NET.link||NET.teacher||!NET.live||NET.lost)return;try{NET.link.send({t:'hb'})}catch(e){}if(Date.now()-NET.rx>12000)netLost()},3000);
+setInterval(()=>{if(!NET.link||!NET.live||NET.lost)return;try{NET.link.send({t:'hb'})}catch(e){}if(Date.now()-NET.rx>12000)netLost()},3000);
 $('#btn-rejoin').onclick=netRejoin;rejoinDraw();
 function netHost(){NET.role='host';NET.seat=0;NET.teacher=false;NET.fmt=NET.fmt||1;NET.pre=null;
   S={mode:'net',pre:true,step:0,fmt:NET.fmt,arena:'standard',cpuLevel:'normal',team:[[],[]],draft:null,edit:null,alt:false,
@@ -2318,16 +2320,17 @@ function netReplace(i,pickUnit,spot){
 // 主機端連線：最多兩個座位。open(code,{onListen,onJoin(i),onData(i,m),onLeave(i),onError}) → {send(i,o),all(o),close}
 function netHub(code,h){
   if(NETTEST){const bc=new BroadcastChannel('mb-'+code),id=Math.random().toString(36).slice(2),seat=[null,null],cp=o=>JSON.parse(JSON.stringify(o));
-    const H={send:(i,o)=>{if(seat[i])bc.postMessage({from:id,role:'host',to:seat[i],o:cp(o)})},all:o=>[0,1].forEach(i=>H.send(i,o)),close:()=>{try{[0,1].forEach(i=>seat[i]&&bc.postMessage({from:id,role:'host',to:seat[i],bye:1}));bc.close()}catch(e){}}};
+    const H={send:(i,o)=>{if(seat[i])bc.postMessage({from:id,role:'host',to:seat[i],o:cp(o)})},all:o=>[0,1].forEach(i=>H.send(i,o)),drop:i=>{seat[i]=null},close:()=>{try{[0,1].forEach(i=>seat[i]&&bc.postMessage({from:id,role:'host',to:seat[i],bye:1}));bc.close()}catch(e){}}};
     bc.onmessage=e=>{const d=e.data;if(d.role!=='guest')return;if(d.to&&d.to!==id)return;let i=seat.indexOf(d.from);
-      if(d.hi){if(i<0){i=seat.indexOf(null);if(i<0)return;seat[i]=d.from;bc.postMessage({from:id,role:'host',to:d.from,hi:1});h.onJoin(i)}return}
+      if(d.hi){if(i<0){i=(d.seat===0||d.seat===1)?d.seat:seat.indexOf(null);if(i<0)return;seat[i]=d.from;bc.postMessage({from:id,role:'host',to:d.from,hi:1});h.onJoin(i)}return}
       if(i<0)return;if(d.bye){seat[i]=null;h.onLeave(i);return}h.onData(i,d.o)};
     setTimeout(()=>h.onListen&&h.onListen(),0);return H}
   let peer,closed=false;const conns=[null,null];
-  const H={send:(i,o)=>{try{conns[i]&&conns[i].open&&conns[i].send(o)}catch(e){}},all:o=>[0,1].forEach(i=>H.send(i,o)),close:()=>{closed=true;conns.forEach(c=>{try{c&&c.close()}catch(e){}});try{peer&&peer.destroy()}catch(e){}}};
+  const H={send:(i,o)=>{try{conns[i]&&conns[i].open&&conns[i].send(o)}catch(e){}},all:o=>[0,1].forEach(i=>H.send(i,o)),drop:i=>{const c=conns[i];conns[i]=null;try{c&&c.close()}catch(e){}},close:()=>{closed=true;conns.forEach(c=>{try{c&&c.close()}catch(e){}});try{peer&&peer.destroy()}catch(e){}}};
   try{peer=new Peer(PID(code));peer.on('open',()=>h.onListen&&h.onListen());
-    peer.on('connection',c=>{const i=conns.indexOf(null);if(i<0){c.on('open',()=>{try{c.close()}catch(e){}});return}conns[i]=c;
-      c.on('open',()=>h.onJoin(i));c.on('data',d=>h.onData(i,d));const gone=()=>{if(conns[i]===c){conns[i]=null;if(!closed)h.onLeave(i)}};c.on('close',gone);c.on('error',gone)});
+    peer.on('disconnected',()=>{if(!closed){try{peer.reconnect()}catch(e){}}});
+    peer.on('connection',c=>{const want=c.metadata&&c.metadata.seat,i=(want===0||want===1)?want:conns.indexOf(null);if(i<0){c.on('open',()=>{try{c.close()}catch(e){}});return}const old=conns[i];conns[i]=c;if(old){try{old.close()}catch(e){}}
+      c.on('open',()=>{if(conns[i]===c)h.onJoin(i)});c.on('data',d=>{if(conns[i]===c)h.onData(i,d)});const gone=()=>{if(conns[i]===c){conns[i]=null;if(!closed)h.onLeave(i)}};c.on('close',gone);c.on('error',gone)});
     peer.on('error',e=>{if(closed)return;h.onError(e&&e.type==='unavailable-id'?'ID_TAKEN':'連線服務出了問題（'+(e&&e.type||'未知')+'），請稍後再試。')})
   }catch(e){setTimeout(()=>h.onError('這個瀏覽器不支援連線對戰。'),0)}
   return H}
@@ -2335,14 +2338,27 @@ const TFS=[1,1.5,2],PNAME=['玩家 1','玩家 2'];
 function teachClose(){try{NET.hub&&NET.hub.all({t:'bye'})}catch(e){}try{NET.hub&&NET.hub.close()}catch(e){}NET.hub=null;NET.T=null;NET.role=null}
 function teachRoom(tries=0,keep=null){netLeave();if(NET.hub){try{NET.hub.close()}catch(e){}}
   const code=String(1000+Math.floor(Math.random()*9000));NET.role='teacher';NET.code=code;
-  const T=NET.T=keep||{fmt:1,arena:'random',alt:false,pl:[{grade:5,unit:'calc',tf:1},{grade:5,unit:'calc',tf:1}],in:[false,false],ready:[null,null],st:['',''],acts:[null,null],repQ:[[],[]],repWait:[null,null],log:[[],[]],waiting:false,listen:false};
+  const T=NET.T=keep||{fmt:1,arena:'random',alt:false,pl:[{grade:5,unit:'calc',tf:1},{grade:5,unit:'calc',tf:1}],in:[false,false],ready:[null,null],st:['',''],acts:[null,null],repQ:[[],[]],repWait:[null,null],log:[[],[]],waiting:false,listen:false,ck:null,lost:false,rx:[0,0]};
   T.in=[false,false];T.ready=[null,null];T.listen=false;
   NET.hub=netHub(code,{onListen:()=>{T.listen=true;teachDraw()},
-    onJoin:i=>{T.in[i]=true;T.ready[i]=null;sfx('switch');NET.hub.send(i,{t:'cfg',fmt:T.fmt,teacher:true,seat:i});teachDraw()},
-    onLeave:i=>{T.in[i]=false;T.ready[i]=null;if(watch()){const g=G;teachStop(PNAME[i]+'離線了，這場對戰結束。')}else teachDraw()},
-    onData:teachMsg,
+    onJoin:i=>{T.in[i]=true;T.rx[i]=Date.now();sfx('switch');if(watch()&&T.ck&&T.ck.g&&!G.over)return teachBack();T.ready[i]=null;NET.hub.send(i,{t:'cfg',fmt:T.fmt,teacher:true,seat:i});teachDraw()},
+    onLeave:teachLeave,
+    onData:(i,m)=>{T.rx[i]=Date.now();if(m&&(m.t==='hb'||m.t==='back'))return;teachMsg(i,m)},
     onError:m=>{if(m==='ID_TAKEN'&&tries<5)return teachRoom(tries+1,T);T.err=m==='ID_TAKEN'?'房間密碼剛好被用走了，請重新開房間。':m;teachDraw()}});
   show('s-setup');teachDraw()}
+// 學生斷線：暫停，等他連回來後三台一起從這一回合重新開始
+function teachLeave(i){const T=NET.T;if(!T)return;T.in[i]=false;
+  if(!watch()||G.over||!T.ck||!T.ck.g){T.ready[i]=null;return teachDraw()}
+  T.lost=true;resToken++;stopTimer();NET.hub.send(1-i,{t:'pause'});const end=()=>{lostHide();T.lost=false;teachStop(PNAME[i]+'離線了，這場對戰結束。')};
+  lostShow(PNAME[i]+'斷線了','請他重新整理後按「回到房間」，回來後會從這一回合重新開始。',90,end,end,'結束這場對戰')}
+function teachBack(){const T=NET.T;if(!T.in[0]||!T.in[1])return;lostHide();T.lost=false;const st=T.ck.start,g=T.ck.g;
+  [0,1].forEach(i=>NET.hub.send(i,{t:'resume',start:st,g,seat:i,teacher:true}));
+  resToken++;stopTimer();document.querySelectorAll('.vsfs,.sw,.fst,.spd').forEach(e=>e.remove());$('#s-battle').classList.remove('show');
+  G=newGame('watch',st.arena,st.cf.map((c,i)=>Object.assign({},c,{name:PNAME[i]})),st.fmt,st.alt);G.alt=st.alt;G.round=g.round;
+  g.players.forEach((q,i)=>{const p=G.players[i],r=Object.assign({},q);delete r.team;delete r.name;delete r.cpu;Object.assign(p,r);q.team.forEach((u,k)=>Object.assign(p.team[k],u));p.miss=(q.miss||[]).slice()});
+  T.acts=[null,null];T.repQ=[[],[]];T.repWait=[null,null];T.st=['',''];T.log=T.log.map(L=>L.filter(x=>x.r<G.round));
+  $('#stage').style.backgroundImage=`url(img/arena_${G.arena}.webp)`;$('#arena-name').textContent=ARENAS[G.arena].n;setSprite(0);setSprite(1);show('s-battle');hud();roundStart()}
+setInterval(()=>{const T=NET.T;if(!NET.hub||!T)return;try{NET.hub.all({t:'hb'})}catch(e){}[0,1].forEach(i=>{if(T.in[i]&&T.rx[i]&&Date.now()-T.rx[i]>12000){NET.hub.drop(i);teachLeave(i)}})},3000);
 function teachDraw(){const T=NET.T;if(!T||!$('#s-setup').classList.contains('on')||watch())return;const el=$('#s-setup');
   const both=T.ready[0]&&T.ready[1],stat=i=>!T.in[i]?'還沒加入':T.ready[i]?'準備好了 ✓':'選角色中…';
   const who=i=>{const r=T.ready[i];const cs=r?(r.team?r.team.map(u=>u.char):[r.char]):[];return cs.map(c=>`<img src="img/${c}.webp" alt="">`).join('')};
@@ -2372,10 +2388,10 @@ function teachMsg(i,m){const T=NET.T;if(!T||!m)return;
 function teachStart(){const T=NET.T;if(!T.ready[0]||!T.ready[1])return;
   const cf=[0,1].map(i=>Object.assign({},T.ready[i],{grade:T.pl[i].grade,unit:T.pl[i].unit,tf:T.pl[i].tf,slow:false}));
   const arena=T.arena==='random'?pick(Object.keys(ARENAS)):T.arena;T.acts=[null,null];T.repQ=[[],[]];T.repWait=[null,null];T.log=[[],[]];T.st=['',''];
-  NET.hub.all({t:'start',arena,cf,alt:T.alt,fmt:T.fmt});T.ready=[null,null];
+  NET.hub.all({t:'start',arena,cf,alt:T.alt,fmt:T.fmt});T.ready=[null,null];T.ck={start:{arena,cf,alt:T.alt,fmt:T.fmt},g:null};T.lost=false;
   beginBattle('watch',arena,cf.map((c,i)=>Object.assign({},c,{name:PNAME[i]})),T.fmt,T.alt)}
-function teachStop(msg){resToken++;stopTimer();NET.hub&&NET.hub.all({t:'bye'});$('#s-battle').classList.remove('show');G=null;const T=NET.T;teachRoom(0,T);if(NET.T)NET.T.err=msg;teachDraw()}
-function teachAgain(){const T=NET.T;G=null;$('#s-battle').classList.remove('show');show('s-setup');NET.hub.all({t:'again'});teachDraw()}
+function teachStop(msg){lostHide();if(NET.T){NET.T.ck=null;NET.T.lost=false}resToken++;stopTimer();NET.hub&&NET.hub.all({t:'bye'});$('#s-battle').classList.remove('show');G=null;const T=NET.T;teachRoom(0,T);if(NET.T)NET.T.err=msg;teachDraw()}
+function teachAgain(){const T=NET.T;T.ck=null;G=null;$('#s-battle').classList.remove('show');show('s-setup');NET.hub.all({t:'again'});teachDraw()}
 // 觀戰：每回合等兩位學生的行動，算出結果後傳給兩邊，自己也播放動畫
 function watchRound(){const T=NET.T;T.waiting=true;T.st=['pick','pick'];if(T.acts[0]&&T.acts[0].r!==G.round)T.acts[0]=null;if(T.acts[1]&&T.acts[1].r!==G.round)T.acts[1]=null;[0,1].forEach(i=>{if(T.acts[i])T.st[i]='done'});
   panel(`<div class="wpanel"><div class="wcols">${[0,1].map(i=>`<div class="wcol" id="wc${i}"></div>`).join('')}</div><div class="wctl"><span>調整答題時間</span>${[0,1].map(i=>`<div class="chips" data-i="${i}"><b>${PNAME[i]}</b>${TFS.map(f=>`<button data-v="${f}">${f===1?'正常':'×'+f}</button>`).join('')}</div>`).join('')}</div></div>`);
@@ -2448,7 +2464,7 @@ const net=()=>!!G&&G.mode==='net';
 const watch=()=>!!G&&G.mode==='watch';
 function passScreen(text,sub,btn,next){stopTimer();panel(`<div class="center"><p class="big">${text}</p><p class="sub">${sub}</p><button class="btn primary" id="go">${btn}</button></div>`);$('#go').onclick=next}
 
-function roundStart(){if(net()&&NET.role==='host'&&!NET.teacher)netCk();G.acts=[null,null];beginRound(G);hud();
+function roundStart(){if(net()&&NET.role==='host'&&!NET.teacher)netCk();if(watch()&&NET.T&&NET.T.ck)NET.T.ck.g=JSON.parse(JSON.stringify({round:G.round,players:G.players}));G.acts=[null,null];beginRound(G);hud();
   if(watch())return watchRound();
   if(net()){NET.sent=false;netState('pick');return selectPhase(0)}
   if(hot())passScreen(`${G.players[0].name} 選招`,'另一位玩家請先不要看螢幕。','開始選招',()=>selectPhase(0));
