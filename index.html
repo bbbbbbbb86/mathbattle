@@ -518,11 +518,12 @@ mark .fr{margin:0}
 .pad .xk b{font:900 26px/1 var(--display)}
 .okstamp{position:absolute;right:8px;top:4px;font:900 44px/1 var(--display);font-style:normal;color:#4a9f2c;rotate:-10deg;animation:stampin .25s both}
 .qbox.fb .q{font-size:clamp(22px,6vw,34px)}
+.q.long{font-size:clamp(16px,4.4vw,26px);line-height:1.35;word-break:normal;text-wrap:balance}.qbox.fb .q.long{font-size:clamp(15px,4vw,23px)}
 .qbox.fb mark,.q mark{background:none;color:var(--bad);padding:0 .3em;border:3px solid var(--bad);border-radius:50%/60%;display:inline-block;rotate:-3deg;line-height:1.25;animation:stampin .3s .15s both}
 .mine{margin:6px 0 0;font-weight:700;color:var(--ink-soft)}
 .hintnote{display:inline-block;margin:8px 0 6px;background:#ffe27a;padding:3px 12px;font-weight:700;rotate:-1.2deg;box-shadow:1px 2px 0 rgba(51,38,31,.2)}
 .boards{grid-template-columns:repeat(2,minmax(0,1fr))}
-@media (min-width:700px){.boards{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (min-width:700px){.boards{grid-template-columns:repeat(5,minmax(0,1fr))}}
 .board small{font-size:11px;line-height:1.25;min-height:2.5em;display:grid;place-items:center;text-align:center}
 .board.na{filter:grayscale(1) brightness(.6);opacity:.55}
 .board.na .chalk{font-size:16px}
@@ -1177,6 +1178,8 @@ mark .fr{margin:0}
 #fstab[hidden],body:has(#s-title.on) #fstab{display:none}
 #fstab svg{width:20px;height:20px}#fstab b{font-size:10.5px;writing-mode:vertical-rl;letter-spacing:.1em}
 @media (orientation:portrait),(max-width:639px){#f0 .pose{left:86%}#f1 .pose{left:14%}#fstab{top:27%;padding:6px 4px 5px 2px}#fstab b{display:none}}
+@media (orientation:landscape){.q.long,.qbox.fb .q.long{font-size:clamp(15px,min(2.2vw,3.6vh),26px)!important;line-height:1.35}}
+@media (orientation:landscape) and (max-height:360px){.q.long,.qbox.fb .q.long{font-size:13.5px!important;line-height:1.25}.panel:has(>#pad)>.qbox{justify-content:safe center}}
 /* ---- 回到房間 ---- */
 .trejoin{position:absolute;left:50%;top:10px;translate:-50% 0;z-index:6;display:flex;align-items:center;gap:10px;border:3px solid var(--ink);border-radius:999px;background:#fff;padding:5px 20px 5px 12px;box-shadow:0 4px 0 var(--ink);text-align:left;animation:rslnx 1.2s ease-in-out infinite}
 .trejoin[hidden]{display:none}
@@ -1424,7 +1427,7 @@ const ARENAS={
   observatory:{n:'星空天文台',rule:'星光加持：必殺技傷害 +10',ultBonus:10}
 };
 const ACOL={standard:'#6fb6f1',volcano:'#e8522a',ice:'#8fd0f5',forest:'#4a9f2c',classroom:'#3f6b4f',desert:'#e0a93b',sky:'#9fd3f7',crystal:'#a45bc9',balance:'#d99a12',observatory:'#3b3f8f'};
-const UNITS={calc:{n:'四則運算',d:'加減乘除與巧算'},seq:{n:'數列規律',d:'找出下一個數'},frac:{n:'分數',d:'三年級開始',from:3},dec:{n:'小數',d:'三年級開始',from:3}};
+const UNITS={calc:{n:'四則運算',d:'加減乘除與巧算'},seq:{n:'數列規律',d:'找出下一個數'},frac:{n:'分數',d:'三年級開始',from:3},dec:{n:'小數',d:'三年級開始',from:3},ratio:{n:'比和比值',d:'六年級開始',from:6}};
 const MAX_ROUND=12, SELECT_SEC=10, ANSWER_SEC=20;
 
 const ri=(a,b,r=Math.random)=>a+Math.floor(r()*(b-a+1));
@@ -1528,6 +1531,31 @@ Object.assign(Q,{
   d99:r=>{const a=ri(12,85,r)/10;return [`9.9 × ${a}`,dn(9.9*a),'9.9 = 10 − 0.1']}
 });
 Q.fChain=r=>{const a=ri(2,5,r),b=ri(a+1,7,r),c=ri(2,6,r),e=a*ri(2,3,r);return [`${FR(a,b)} × ${FR(b,c)} × ${FR(c,e)}`,fa(a,e),'先上下約分再乘']};
+/* 比和比值（六上 N-6-6）：答案一律是一個數，題目用「？」標出要填的位置 */
+const R2=(a,b)=>`${a}：${b}`;
+const cp2=(lo,hi,r)=>{let a,b;do{a=ri(lo,hi,r);b=ri(lo,hi,r)}while(a===b||gcd(a,b)!==1);return [a,b]};
+const RCTX=[['男生','女生','人','全班'],['糖','水','克','糖水'],['食鹽','水','克','食鹽水'],['牛奶','紅茶','毫升','奶茶'],['原汁','水','毫升','果汁'],['紅珠','藍珠','顆','全部珠子']];
+Object.assign(Q,{
+  rVal:r=>{const b=ri(2,13,r),k=ri(2,9,r);return [`${R2(b*k,b)} 的比值`,k,'比值 = 前項 ÷ 後項']},
+  rValF:r=>{const [a,b]=cp2(1,12,r);return [`${R2(a,b)} 的比值`,fa(a,b),'比值 = 前項 ÷ 後項，可以寫成分數']},
+  rEq:r=>{const [a,b]=cp2(1,9,r),k=ri(2,6,r);return r()<.5?[`${R2(a,b)} = ${R2(a*k,'？')}`,b*k,`前項變成 ${k} 倍，後項也要變成 ${k} 倍`]:[`${R2(a,b)} = ${R2('？',b*k)}`,a*k,`後項變成 ${k} 倍，前項也要變成 ${k} 倍`]},
+  rValS:r=>{const [a,b]=cp2(1,11,r),g=ri(2,9,r);return [`${R2(a*g,b*g)} 的比值`,fa(a,b),`前項 ÷ 後項，再用 ${g} 約分`]},
+  rSimp:r=>{const [a,b]=cp2(1,12,r),g=ri(2,9,r),back=r()<.5;return [`${R2(a*g,b*g)} 化成最簡單整數比，${back?'後項':'前項'}是 ？`,back?b:a,`前項、後項同除以最大公因數 ${g}`]},
+  rEqD:r=>{const [a,b]=cp2(1,9,r);let m1,m2;do{m1=ri(2,9,r);m2=ri(2,9,r)}while(m1===m2);return r()<.5?[`${R2(a*m1,b*m1)} = ${R2(a*m2,'？')}`,b*m2,`先化成 ${R2(a,b)}，再同乘以 ${m2}`]:[`${R2(a*m1,b*m1)} = ${R2('？',b*m2)}`,a*m2,`先化成 ${R2(a,b)}，再同乘以 ${m2}`]},
+  rDec:r=>{let a,b,g;do{[a,b]=cp2(1,9,r);g=ri(2,9,r)}while((a*g)%10===0&&(b*g)%10===0);const back=r()<.5;return [`${R2(dn(a*g/10),dn(b*g/10))} 化成最簡單整數比，${back?'後項':'前項'}是 ？`,back?b:a,'先同乘以 10 化成整數比，再約分']},
+  rFrac:r=>{const [d1,d2]=pick([[2,3],[3,4],[4,5],[2,5],[3,5],[5,6],[4,3],[6,5],[2,7],[3,8]],r),n1=cop(d1,r),n2=cop(d2,r);let x=n1*d2,y=n2*d1;const g=gcd(x,y);x/=g;y/=g;if(x===y)return Q.rFrac(r);const back=r()<.5;
+    return [`${FR(n1,d1)}：${FR(n2,d2)} 化成最簡單整數比，${back?'後項':'前項'}是 ？`,back?y:x,`先通分，再同乘以分母 ${d1*d2/gcd(d1,d2)}`]},
+  rEqNI:r=>{let a,b,c;do{a=ri(2,9,r);b=ri(2,9,r);c=ri(2,30,r)}while(a===b||gcd(a,b)!==1||(b*c)%a===0||c%a===0);return [`${R2(a,b)} = ${R2(c,'？')}`,fa(b*c,a),`先算 ${c} ÷ ${a} 是幾倍，答案可以寫成分數`]},
+  rApp1:r=>{const [x,y,u]=pick(RCTX,r),[a,b]=cp2(1,9,r),k=ri(2,12,r);return r()<.5?[`${x}：${y} = ${R2(a,b)}，${x} ${a*k} ${u}，${y} ？ ${u}`,b*k,`${a*k} 是 ${a} 的 ${k} 倍`,8]:[`${x}：${y} = ${R2(a,b)}，${y} ${b*k} ${u}，${x} ？ ${u}`,a*k,`${b*k} 是 ${b} 的 ${k} 倍`,8]},
+  rApp2:r=>{const [x,y,u]=pick(RCTX,r),[a,b]=cp2(1,9,r),k=ri(3,15,r),t=(a+b)*k,big=r()<.5;return [`${x}和${y}共 ${t} ${u}，${x}：${y} = ${R2(a,b)}，${big?x:y} ？ ${u}`,(big?a:b)*k,`全部分成 ${a} + ${b} = ${a+b} 份`,8]},
+  rApp3:r=>{const [x,y,u,w]=pick(RCTX,r),[a,b]=cp2(1,19,r);return [`${x}：${y} = ${R2(a,b)}，${x}：${w}的比值`,fa(a,a+b),`${w}有 ${a} + ${b} = ${a+b} 份`,6]},
+  rFracMix:r=>{const d1=pick([2,3,4,5,9],r),d2=pick([2,3,4,6],r),w1=ri(1,3,r),w2=ri(1,3,r),n1=cop(d1,r),n2=cop(d2,r);let x=(w1*d1+n1)*d2,y=(w2*d2+n2)*d1;const g=gcd(x,y);x/=g;y/=g;if(x===y)return Q.rFracMix(r);const back=r()<.5;
+    return [`${MX(w1,n1,d1)}：${MX(w2,n2,d2)} 化成最簡單整數比，${back?'後項':'前項'}是 ？`,back?y:x,'先化成假分數，再通分']},
+  rRect:r=>{const [a,b]=cp2(2,9,r),k=ri(2,8,r);const L=Math.max(a,b),W=Math.min(a,b);return [`長方形周長 ${2*(L+W)*k} 公尺，長：寬 = ${R2(L,W)}，面積 ？ 平方公尺`,L*W*k*k,`長 + 寬 = 周長的一半，再分成 ${L+W} 份`,10]},
+  rDiff:r=>{const [a,b]=cp2(2,15,r),k=ri(2,9,r);return [`甲：乙 = ${R2(a,b)}，乙是 ${b*k}，甲和乙相差 ？`,Math.abs(a-b)*k,`${b*k} 是 ${b} 的 ${k} 倍`,8]},
+  rChange:r=>{for(let t=0;t<400;t++){const [a,b]=cp2(2,9,r),[c,d]=cp2(2,9,r),k=ri(3,25,r);if(c*b<=a*d)continue;const girls=b*k;if((c*girls)%d)continue;const add=c*girls/d-a*k;if(add<=0||add>60)continue;
+      return [`男生：女生 = ${R2(a,b)}，共 ${(a+b)*k} 人；女生不變，要變成 ${R2(c,d)}，男生要增加 ？ 人`,add,`先算出女生 ${girls} 人`,12]}return Q.rApp2(r)}
+});
 const BANK={
  calc:{
   1:[[Q.addTo(10),Q.subFrom(10)],[Q.addTo(20),Q.subFrom(20)],[Q.add21,Q.subFrom(30),Q.addTo(50)]],
@@ -1549,6 +1577,9 @@ const BANK={
   5:[[Q.dMulI,Q.dAdd2,Q.dSub2],[Q.dMulI2,Q.dMul,Q.dIDiv],[Q.dMul2,Q.dMul3,Q.dDivI]],
   6:[[Q.dMul,Q.dDivI,Q.dIDiv],[Q.dDiv,Q.dMul2,Q.dDiv2],[Q.dDiv3,Q.dDiv4,Q.dMul3]],
   7:[[Q.dDiv,Q.dDiv2,Q.d25],[Q.d125,Q.dDiv3,Q.dDist],[Q.d99,Q.d8,Q.dDist,Q.dDiv4]]},
+ ratio:{
+  6:[[Q.rVal,Q.rValF,Q.rEq],[Q.rValS,Q.rSimp,Q.rEqD],[Q.rDec,Q.rFrac,Q.rEqNI,Q.rApp1,Q.rApp2,Q.rApp3]],
+  7:[[Q.rSimp,Q.rEqD,Q.rValS,Q.rDec],[Q.rFrac,Q.rEqNI,Q.rApp1,Q.rApp2,Q.rApp3],[Q.rFracMix,Q.rRect,Q.rDiff,Q.rChange]]},
  seq:{
   1:[[Q.ar(1,2)],[Q.ar(2,5),Q.arDown(1,2)],[Q.ar(5,10),Q.arDown(2,5)]],
   2:[[Q.ar(2,5)],[Q.ar(5,10),Q.arDown(2,5)],[Q.ar(3,9),Q.geo(2),Q.arDown(3,9)]],
@@ -1559,22 +1590,26 @@ const BANK={
   6:[[Q.ar(11,30),Q.geo(2),Q.arDown(7,19)],[Q.diff2,Q.squares,Q.fib,Q.geo(3)],[Q.inter,Q.dbl1,Q.cubes,Q.diffGeo]]}
 };
 function makeQuestion(unit,grade,diff,r=Math.random){
-  if(!BANK[unit][grade]){if(grade<3)grade=3}
-  const [q,a,hint]=pick(BANK[unit][grade][diff],r)(r);
-  return {q:unit!=='seq'&&!q.includes('？')&&!/分數$/.test(q)?q+' = ？':q,a,hint:hint||'',unit}}
+  if(!BANK[unit][grade])grade=Math.max(grade<3?3:grade,Math.min(...Object.keys(BANK[unit]).map(Number)));
+  const [q,a,hint,extra]=pick(BANK[unit][grade][diff],r)(r);
+  const qq=unit!=='seq'&&!q.includes('？')&&!/分數$/.test(q)?q+' = ？':q;
+  return {q:qq,a,hint:hint||'',unit,t:extra||0,long:qq.replace(/<[^>]+>/g,'').length>16}}
 // 答案顯示與判斷：整數、小數、分數（{n,d}，exact 表示必須寫成題目要求的形式）
 const ansHTML=a=>typeof a==='object'?FR(a.n,a.d):String(a);
 function checkAns(val,a){
   if(val===''||val==null)return false;
-  if(typeof a==='object'){const m=/^(\d+)\/(\d+)$/.exec(val);if(!m||+m[2]===0)return false;const n=+m[1],d=+m[2];
+  if(typeof a==='object'&&val.includes('/')){const m=/^(\d+)\/(\d+)$/.exec(val);if(!m||+m[2]===0)return false;const n=+m[1],d=+m[2];
     return a.exact?(n===a.n&&d===a.d):n*a.d===a.n*d}
+  if(typeof a==='object'&&a.exact)return false;
+  if(typeof a==='object'&&!a.exact&&/^\d*\.\d+$/.test(val))return Math.abs(parseFloat(val)-a.n/a.d)<1e-9;
   if(val.includes('/')){const m=/^(\d+)\/(\d+)$/.exec(val);return !!m&&+m[2]!==0&&+m[1]===a*+m[2]}
   return Math.abs(parseFloat(val)-a)<1e-9}
 // 對應十二年國教數學領綱「學習內容」條目
 const STD={calc:{1:'N-1-3 基本加減法',2:'N-2-7 十十乘法',3:'N-3-3 乘以一位數・N-3-5 除以一位數',4:'N-4-2 較大位數之乘除計算',5:'R-5-2 四則計算規律（II）',6:'R-6-1 數的計算規律',7:'挑戰：超出課綱的巧算'},
   seq:{1:'數列暖身（課綱 R-3-2 的先備）',2:'數列暖身（課綱 R-3-2 的先備）',3:'R-3-2 數量模式與推理（I）',4:'R-4-4 數量模式與推理（II）',5:'R-4-4 的延伸',6:'R-6-2 數量關係',7:'挑戰：超出課綱的數列'},
   frac:{3:'N-3-9 簡單同分母分數',4:'N-4-5 同分母分數・N-4-6 等值分數',5:'N-5-4 異分母分數・N-5-5 分數的乘法',6:'N-6-3 分數的除法',7:'挑戰：分數巧算'},
-  dec:{3:'N-3-10 一位小數',4:'N-4-7 二位小數',5:'N-5-8 小數的乘法・N-5-9 除以整數',6:'N-6-4 小數的除法',7:'挑戰：小數巧算'}};
+  dec:{3:'N-3-10 一位小數',4:'N-4-7 二位小數',5:'N-5-8 小數的乘法・N-5-9 除以整數',6:'N-6-4 小數的除法',7:'挑戰：小數巧算'},
+  ratio:{6:'N-6-6 比與比值',7:'挑戰：比的多步驟應用'}};
 
 function elemMul(m,d){if(m==='none'||d==='none')return 1;if(BEATS[m]===d)return 1.1;if(BEATS[d]===m)return .96;return 1}
 function mkUnit(u,scale){const hp=Math.round(CHARS[u.char].hp*scale);return {char:u.char,moves:u.moves,hp,maxHp:hp,charge:0,guard:0}}
@@ -2141,7 +2176,7 @@ function renderSetup(){
   $('#sn').onclick=()=>{S.focus=0;if(editing){S.edit=null;renderSetup();return}S.tf=0;if(last){if(S.pre)netOpenRoom();else if(S.mode==='net')netReady();else startBattle()}else{S.step++;renderSetup()}};
 }
 
-const boardInfo=(k,g)=>{const na=(UNITS[k].from||1)>g;let ex='';if(!na){try{ex=makeQuestion(k,g,1).q}catch(e){}}return {na,ex:na?'三年級開始':ex,std:na?'':(STD[k][g]||'')}};
+const boardInfo=(k,g)=>{const na=(UNITS[k].from||1)>g;let ex='';if(!na){try{for(let t=0;t<12;t++){ex=makeQuestion(k,g,t<6?1:0).q;if(ex.replace(/<[^>]+>/g,'').length<=13)break}}catch(e){}}return {na,ex:na?`${'一二三四五六'[(UNITS[k].from||1)-1]}年級開始`:ex,std:na?'':(STD[k][g]||'')}};
 
 /* ===== 房間密碼連線（只有自架網站版可用；用 PeerJS 做點對點連線） =====
    每台裝置都把自己當成 0 號（畫面左邊）、對手當 1 號。結果由房主計算，
@@ -2514,13 +2549,13 @@ function scrOn(){if($('#scr'))return scrOff();const st=$('#stage');$('#s-battle'
   cv.onpointerup=cv.onpointercancel=()=>{dr=false};
   $('#scc').onclick=()=>{cx.clearRect(0,0,cv.width,cv.height);box.classList.remove('used')};$('#scx').onclick=scrOff}
 function answerPhase(i){
-  const p=G.players[i],m=CHARS[p.char].moves[G.acts[i].mi],diff=TYPES[m.type].diff,limit=(answerLimit(p)+(p.unit==='frac'?6:0))*tmul()*(p.tf||1);
-  const qu=makeQuestion(p.unit,p.grade,diff);let val='',done=false;
+  const p=G.players[i],m=CHARS[p.char].moves[G.acts[i].mi],diff=TYPES[m.type].diff;
+  const qu=makeQuestion(p.unit,p.grade,diff),limit=(answerLimit(p)+(p.unit==='frac'?6:0)+(p.unit==='ratio'?4:0)+(qu.t||0))*tmul()*(p.tf||1);let val='',done=false;
   panel(`<div class="phead"><b>${p.name}・${m.n} <span class="chip">${DIFFN[diff]}</span></b><span class="sec" id="ts"></span></div><div class="tbar"><div id="tb"></div></div>
-  <div class="qbox"><div class="q">${qu.q}</div><div class="ans" id="ans"></div>${typeof qu.a==='object'?'<small class="fhint">先按分子 → ／ → 再按分母</small>':''}<button class="scb" id="scb" aria-label="打開草稿紙"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" d="M4 20l1.200-4.800L16.500 3.900a2 2 0 0 1 2.800 0l.8.8a2 2 0 0 1 0 2.800L8.800 18.800z M14.500 6l3.500 3.500"/></svg>草稿</button></div>
-  <div class="pad" id="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-n="${n}">${n}</button>`).join('')}<button class="del" data-n="del">刪除</button><button data-n="0">0</button><button class="ok" data-n="ok">送出</button>${p.unit==='frac'?'<button class="xk" data-n="/"><b>／</b>分數線</button>':p.unit==='dec'?'<button class="xk" data-n="."><b>．</b>小數點</button>':''}</div>`);
+  <div class="qbox"><div class="q ${qu.long?'long':''}">${qu.q}</div><div class="ans" id="ans"></div>${typeof qu.a==='object'?'<small class="fhint">先按分子 → ／ → 再按分母</small>':''}<button class="scb" id="scb" aria-label="打開草稿紙"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" d="M4 20l1.200-4.800L16.500 3.900a2 2 0 0 1 2.800 0l.8.8a2 2 0 0 1 0 2.800L8.800 18.800z M14.500 6l3.500 3.500"/></svg>草稿</button></div>
+  <div class="pad" id="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-n="${n}">${n}</button>`).join('')}<button class="del" data-n="del">刪除</button><button data-n="0">0</button><button class="ok" data-n="ok">送出</button>${p.unit==='frac'||p.unit==='ratio'?'<button class="xk" data-n="/"><b>／</b>分數線</button>':p.unit==='dec'?'<button class="xk" data-n="."><b>．</b>小數點</button>':''}</div>`);
   $('#scb').onclick=scrOn;
-  if(p.unit==='frac'||p.unit==='dec')$('#pad').classList.add('x');
+  if(p.unit==='frac'||p.unit==='dec'||p.unit==='ratio')$('#pad').classList.add('x');
   const elapsed=runTimer(limit,()=>finish(true));
   function finish(timeout){if(done)return;done=true;stopTimer();document.removeEventListener('keydown',onKey);
     const time=Math.min(limit,Math.round(elapsed()*10)/10),correct=!timeout&&checkAns(val,qu.a);
@@ -2532,7 +2567,7 @@ function answerPhase(i){
     sfx('no');let gone=false;const go=()=>{if(gone)return;gone=true;stepAnswer(i+1)};
     const shown=qu.q.includes('？')?qu.q.replace('？',`<mark>${ansHTML(qu.a)}</mark>`):`${qu.q} → <mark>${ansHTML(qu.a)}</mark>`;
     panel(`<div class="phead"><b>${p.name}・${OPT.soft?'再想想':'這題沒答對'}</b></div>
-      <div class="qbox fb"><div class="q">${shown}</div><p class="mine">${timeout?'時間到了':'你的答案：'+valHTML(val)}</p>${qu.hint?`<p class="hintnote">提示：${qu.hint}</p>`:''}</div>
+      <div class="qbox fb"><div class="q ${qu.long?'long':''}">${shown}</div><p class="mine">${timeout?'時間到了':'你的答案：'+valHTML(val)}</p>${qu.hint?`<p class="hintnote">提示：${qu.hint}</p>`:''}</div>
       <button class="btn primary" id="fbok">知道了</button>`);
     $('#fbok').onclick=go;setTimeout(go,8000)}
   function press(n){if(done)return;if(n==='ok'){if(val!=='')finish(false);return}
@@ -2541,7 +2576,7 @@ function answerPhase(i){
     else if(n==='.'){if(!val.includes('.')&&!val.includes('/'))val=(val===''?'0':val)+'.'}
     else if(val.length<8)val=(val==='0'?'':val)+n;
     $('#ans').innerHTML=valHTML(val)}
-  function onKey(e){if(/^[0-9]$/.test(e.key))press(e.key);else if(e.key==='/'&&p.unit==='frac')press('/');else if(e.key==='.'&&p.unit==='dec')press('.');else if(e.key==='Backspace')press('del');else if(e.key==='Enter')press('ok')}
+  function onKey(e){if(/^[0-9]$/.test(e.key))press(e.key);else if(e.key==='/'&&(p.unit==='frac'||p.unit==='ratio'))press('/');else if(e.key==='.'&&p.unit==='dec')press('.');else if(e.key==='Backspace')press('del');else if(e.key==='Enter')press('ok')}
   $('#pad').onclick=e=>{const b=e.target.closest('button');if(b)press(b.dataset.n)};
   document.addEventListener('keydown',onKey);
 }
