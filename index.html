@@ -588,6 +588,10 @@ mark .fr{margin:0}
 .tpl{opacity:.6}.tpl.in{opacity:1}.tpl.rdy{background:#f1f9e8}
 .tph{grid-column:1/-1;display:flex;align-items:center;gap:10px;font-size:18px}.tph em{font-style:normal;font-size:14px;font-weight:900;color:var(--ink-soft)}.tpl.rdy .tph em{color:#3a8a1f}
 .tpc{margin-left:auto;display:flex}.tpc img{width:44px;margin-left:-8px}
+.tsl{display:flex;align-items:center;gap:8px;min-width:0}.tsl input{flex:1;min-width:90px;max-width:360px;accent-color:#d99a12;height:30px;margin:0}.tsl b{min-width:3.6em;font-size:16px;font-weight:900;text-align:right;order:3}.tsl button{order:2;width:32px;height:32px;flex:none;border-radius:50%;border:3px solid var(--ink);background:#ffd93b;font:900 18px/1 var(--display);padding:0;box-shadow:0 2px 0 var(--ink)}.tsl button:first-child{order:0}.tsl input{order:1}.tsl button:last-child{order:4}
+.tdiv{grid-column:1/-1;border-top:2px dashed #d8cbb4;margin:2px 0}
+.tpls.same .tpl{padding:8px 14px}
+.wsl{flex:1 1 260px;display:flex;align-items:center;gap:8px}.wsl>b{white-space:nowrap;font-size:14px}.wsl .tsl{flex:1}
 .tstd{grid-column:1/-1;font-size:12px;font-weight:700;color:var(--ink-soft)}
 .chips{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
 .chips button{border:2.5px solid var(--ink);background:#fff;border-radius:999px;padding:1px 12px;font-weight:900;font-size:15px;min-width:38px}
@@ -1619,14 +1623,14 @@ function elemMul(m,d){if(m==='none'||d==='none')return 1;if(BEATS[m]===d)return 
 function mkUnit(u,scale){const hp=Math.round(CHARS[u.char].hp*scale);return {char:u.char,moves:u.moves,hp,maxHp:hp,charge:0,guard:0}}
 function newPlayer(c,scale=1){
   const team=(c.team||[{char:c.char,moves:c.moves}]).map(u=>mkUnit(u,scale));
-  const p={name:c.name,cpu:c.cpu||null,grade:c.grade||5,unit:c.unit||'calc',slow:!!c.slow,tf:c.tf||(c.slow?2:1),team,active:0,streak:0,jam:0,jamNow:false,right:0,total:0,time:0,miss:[]};
+  const p={name:c.name,cpu:c.cpu||null,grade:c.grade||5,unit:c.unit||'calc',slow:!!c.slow,tf:c.tf||(c.slow?2:1),ans:+c.ans||0,team,active:0,streak:0,jam:0,jamNow:false,right:0,total:0,time:0,miss:[]};
   for(const k of ['char','moves','hp','maxHp','charge','guard'])Object.defineProperty(p,k,{get(){return this.team[this.active][k]},set(v){this.team[this.active][k]=v}});
   return p}
 function newGame(mode,arena,cfgs,fmt=1){const ps=cfgs.map(c=>newPlayer(c,fmt===3?60/150:1));for(const p of ps){p.ultCut=ARENAS[arena].ultCut||0;p.timeAdj=ARENAS[arena].time||0}return {mode,arena,fmt,round:1,maxRound:fmt===3?20:MAX_ROUND,over:null,pending:[],players:ps}}
 const alive=p=>p.team.map((u,k)=>u.hp>0?k:-1).filter(k=>k>=0);
 function ultNeed(p){return (p.hp<p.maxHp*.3?2:3)-(p.ultCut||0)}
 function canUse(p,mi){const m=CHARS[p.char].moves[mi];return m.type!=='ult'||p.streak>=ultNeed(p)}
-function answerLimit(p){return (typeof ansBase==='function'?ansBase():ANSWER_SEC)+(p.char==='turtle'?5:0)-(p.jamNow?6:0)-(p.chillNow?4:0)+(p.timeAdj||0)}
+function answerLimit(p){return (p.ans||(typeof ansBase==='function'?ansBase():ANSWER_SEC))+(p.char==='turtle'?5:0)-(p.jamNow?6:0)-(p.chillNow?4:0)+(p.timeAdj||0)}
 function beginRound(G){for(const p of G.players){p.jamNow=p.jam>0;if(p.jamNow)p.jam--;p.chillNow=p.chill>0;if(p.chillNow)p.chill--}}
 function calcDamage(G,ai,m,correct,first){
   const A=G.players[ai],D=G.players[1-ai],t=TYPES[m.type];
@@ -2211,10 +2215,10 @@ function netOpen(role,code,h){
   const bind=c=>{const old=conn;conn=c;if(old&&old!==c){try{old.close()}catch(e){}}c.on('open',()=>{if(conn===c)h.onOpen()});c.on('data',d=>{if(conn===c)h.onData(d)});const cl=()=>{if(!closed&&conn===c){conn=null;h.onClose()}};c.on('close',cl);c.on('error',cl)};
   try{
     if(role==='host'){peer=new Peer(PID(code));peer.on('open',()=>h.onListen&&h.onListen());peer.on('connection',c=>bind(c));peer.on('disconnected',()=>{if(!closed){try{peer.reconnect()}catch(e){}}});
-      peer.on('error',e=>{if(closed)return;h.onError(e&&e.type==='unavailable-id'?'ID_TAKEN':'連線服務出了問題（'+(e&&e.type||'未知')+'），請稍後再試。')})}
+      peer.on('error',e=>{if(closed)return;h.onError(e&&e.type==='unavailable-id'?'ID_TAKEN':(e&&e.type==='browser-incompatible'?'這個瀏覽器不支援連線對戰。請改用 Chrome 或 Safari 開啟（不要在 LINE、FB 裡直接開）。':'連線服務出了問題（'+(e&&e.type||'未知')+'），請稍後再試。'))})}
     else{peer=new Peer();const to=setTimeout(()=>{if(!conn||!conn.open)h.onError('連線逾時。請確認兩台裝置都能上網，再試一次。')},15000);
       peer.on('open',()=>bind(peer.connect(PID(code),{reliable:true,metadata:{seat:h.seat}})));
-      peer.on('error',e=>{if(closed)return;clearTimeout(to);h.onError(e&&e.type==='peer-unavailable'?'找不到這個房間，請確認密碼。':'連線服務出了問題（'+(e&&e.type||'未知')+'），請稍後再試。')})}
+      peer.on('error',e=>{if(closed)return;clearTimeout(to);h.onError(e&&e.type==='peer-unavailable'?'找不到這個房間，請確認密碼。':(e&&e.type==='browser-incompatible'?'這個瀏覽器不支援連線對戰。請改用 Chrome 或 Safari 開啟（不要在 LINE、FB 裡直接開）。':'連線服務出了問題（'+(e&&e.type||'未知')+'），請稍後再試。'))})}
   }catch(e){setTimeout(()=>h.onError('這個瀏覽器不支援連線對戰。'),0)}
   return L}
 function netLeave(msg){const had=!!NET.link;try{NET.link&&NET.link.send({t:'bye'})}catch(e){}try{NET.link&&NET.link.close()}catch(e){}NET.link=null;NET.role=null;NET.cfg=[null,null];NET.oppAct=null;NET.res=null;NET.ready=false;NET.rep=null;NET.repWait=null;NET.live=false;NET.lost=false;NET.ck=null;lostHide();roomClear();netOpp('');return had}
@@ -2329,7 +2333,7 @@ function netState(st){try{NET.link&&NET.link.send({t:'st',s:st})}catch(e){}}
 function netMsg(m){if(!m||!NET.link)return;
   if(m.t==='cfg'){if(NET.role==='guest'){NET.live=true;NET.ck=null;NET.fmt=m.fmt||1;NET.seat=m.seat===0?0:1;NET.teacher=!!m.teacher;NET.dflt=m.grade?{grade:m.grade,unit:m.unit||'calc'}:null;NET.ans=m.teacher?0:(m.ans||ANSWER_SEC);roomSave();netSetup()}}
   else if(m.t==='again'){if(NET.teacher&&S&&S.mode==='net')netReady()}
-  else if(m.t==='tf'){if(net()){const p=G.players[m.seat===NET.seat?0:1];p.tf=m.tf;hud()}}
+  else if(m.t==='tf'){if(net()){const p=G.players[m.seat===NET.seat?0:1];if(m.ans)p.ans=m.ans;if(m.tf)p.tf=m.tf;hud()}}
   else if(m.t==='dp'){if(S&&S.mode==='net'&&S.draft&&S.draft.turn<6&&S.draft.order[S.draft.turn]===1){S.team[1].push({name:CHARS[m.c].n,char:m.c,moves:recoMoves(m.c)});S.draft.turn++;
       const tk=[...S.team[0],...S.team[1]].map(u=>u.char);if(tk.includes(S.draft.focus))S.draft.focus=Object.keys(CHARS).find(c=>!tk.includes(c))||S.draft.focus;
       sfx('tick');if($('#s-setup').classList.contains('on')&&S.steps[S.step]==='draft'&&S.edit==null&&!NET.ready)renderSetup()}}
@@ -2376,14 +2380,19 @@ function netHub(code,h){
     peer.on('disconnected',()=>{if(!closed){try{peer.reconnect()}catch(e){}}});
     peer.on('connection',c=>{const want=c.metadata&&c.metadata.seat,i=(want===0||want===1)?want:conns.indexOf(null);if(i<0){c.on('open',()=>{try{c.close()}catch(e){}});return}const old=conns[i];conns[i]=c;if(old){try{old.close()}catch(e){}}
       c.on('open',()=>{if(conns[i]===c)h.onJoin(i)});c.on('data',d=>{if(conns[i]===c)h.onData(i,d)});const gone=()=>{if(conns[i]===c){conns[i]=null;if(!closed)h.onLeave(i)}};c.on('close',gone);c.on('error',gone)});
-    peer.on('error',e=>{if(closed)return;h.onError(e&&e.type==='unavailable-id'?'ID_TAKEN':'連線服務出了問題（'+(e&&e.type||'未知')+'），請稍後再試。')})
+    peer.on('error',e=>{if(closed)return;h.onError(e&&e.type==='unavailable-id'?'ID_TAKEN':(e&&e.type==='browser-incompatible'?'這個瀏覽器不支援連線對戰。請改用 Chrome 或 Safari 開啟（不要在 LINE、FB 裡直接開）。':'連線服務出了問題（'+(e&&e.type||'未知')+'），請稍後再試。'))})
   }catch(e){setTimeout(()=>h.onError('這個瀏覽器不支援連線對戰。'),0)}
   return H}
 const TFS=[1,1.5,2],PNAME=['玩家 1','玩家 2'];
+const clampS=v=>Math.max(5,Math.min(120,Math.round(+v)||ANSWER_SEC));
+// 秒數拉桿：拖曳時只更新數字，不重畫畫面
+const sliderHTML=(k,v)=>`<div class="tsl" data-s="${k}"><button type="button" data-d="-1" aria-label="減少 1 秒">−</button><input type="range" min="5" max="120" step="1" value="${v}" aria-label="答題時間（秒）"><b>${v} 秒</b><button type="button" data-d="1" aria-label="增加 1 秒">＋</button></div>`;
+function sliderBind(root,get,set){root.querySelectorAll('.tsl').forEach(w=>{const k=w.dataset.s,r=w.querySelector('input'),b=w.querySelector('b'),put=v=>{v=clampS(v);set(k,v);r.value=v;b.textContent=v+' 秒'};
+  r.oninput=()=>put(r.value);w.querySelectorAll('button').forEach(x=>x.onclick=e=>{e.stopPropagation();put(get(k)+ +x.dataset.d);sfx('tap')})})}
 function teachClose(){try{NET.hub&&NET.hub.all({t:'bye'})}catch(e){}try{NET.hub&&NET.hub.close()}catch(e){}NET.hub=null;NET.T=null;NET.role=null}
 function teachRoom(tries=0,keep=null){netLeave();if(NET.hub){try{NET.hub.close()}catch(e){}}
   const code=String(1000+Math.floor(Math.random()*9000));NET.role='teacher';NET.code=code;
-  const T=NET.T=keep||{fmt:1,arena:'random',alt:false,pl:[{grade:5,unit:'calc',tf:1},{grade:5,unit:'calc',tf:1}],in:[false,false],ready:[null,null],st:['',''],acts:[null,null],repQ:[[],[]],repWait:[null,null],log:[[],[]],waiting:false,listen:false,ck:null,lost:false,rx:[0,0]};
+  const a0=clampS(OPT.ans||ANSWER_SEC);const T=NET.T=keep||{fmt:1,arena:'random',alt:false,same:true,all:{grade:5,unit:'calc',ans:a0},pl:[{grade:5,unit:'calc',ans:a0},{grade:5,unit:'calc',ans:a0}],in:[false,false],ready:[null,null],st:['',''],acts:[null,null],repQ:[[],[]],repWait:[null,null],log:[[],[]],waiting:false,listen:false,ck:null,lost:false,rx:[0,0]};
   T.in=[false,false];T.ready=[null,null];T.listen=false;
   NET.hub=netHub(code,{onListen:()=>{T.listen=true;teachDraw()},
     onJoin:i=>{T.in[i]=true;T.rx[i]=Date.now();sfx('switch');if(watch()&&T.ck&&T.ck.g&&!G.over)return teachBack();T.ready[i]=null;NET.hub.send(i,{t:'cfg',fmt:T.fmt,teacher:true,seat:i});teachDraw()},
@@ -2406,32 +2415,35 @@ function teachBack(){const T=NET.T;if(!T.in[0]||!T.in[1])return;lostHide();T.los
 setInterval(()=>{const T=NET.T;if(!NET.hub||!T)return;try{NET.hub.all({t:'hb'})}catch(e){}[0,1].forEach(i=>{if(T.in[i]&&T.rx[i]&&Date.now()-T.rx[i]>12000){NET.hub.drop(i);teachLeave(i)}})},3000);
 function teachDraw(){const T=NET.T;if(!T||!$('#s-setup').classList.contains('on')||watch())return;const el=$('#s-setup');
   const both=T.ready[0]&&T.ready[1],stat=i=>!T.in[i]?'還沒加入':T.ready[i]?'準備好了 ✓':'選角色中…';
+  const qrows=(q,k)=>`<span>年級</span><div class="chips" data-g="grade">${[1,2,3,4,5,6,7].map(g=>`<button class="${q.grade===g?'on':''}" data-v="${g}">${g===7?'★':g}</button>`).join('')}</div>
+    <span>單元</span><div class="chips" data-g="unit">${Object.entries(UNITS).map(([kk,u])=>`<button class="${q.unit===kk?'on':''}" data-v="${kk}" ${(u.from||1)>q.grade?'disabled':''}>${u.n}</button>`).join('')}</div>
+    <span>答題時間</span>${sliderHTML(k,q.ans)}
+    <small class="tstd">${STD[q.unit][q.grade]||''}</small>`;
   const who=i=>{const r=T.ready[i];const cs=r?(r.team?r.team.map(u=>u.char):[r.char]):[];return cs.map(c=>`<img src="img/${c}.webp" alt="">`).join('')};
   el.innerHTML=`<h2>老師的房間</h2><p class="sub">請兩位學生按「房間密碼連線 → 加入房間」，輸入這組密碼。難度和輔助只有這裡能設定。</p>
   <div class="troom"><div class="tcode"><div class="ncode sm">${[...NET.code].map((d,k)=>`<b style="--k:${k}">${d}</b>`).join('')}</div><p class="nwait ${T.err?'err':''}">${T.err||(T.listen?'房間已開，等學生加入':'正在開房間…')}</p></div>
-  <div class="tset"><span>對戰形式</span><div class="chips" data-g="fmt">${[[1,'單挑'],[3,'3 對 3']].map(([v,n])=>`<button class="${T.fmt===v?'on':''}" data-v="${v}">${n}</button>`).join('')}</div>
+  <div class="tset"><span>設定方式</span><div class="chips" data-g="same">${[[1,'兩人相同設定'],[0,'個別設定']].map(([v,n])=>`<button class="${(T.same?1:0)===v?'on':''}" data-v="${v}">${n}</button>`).join('')}</div>
+    <span>對戰形式</span><div class="chips" data-g="fmt">${[[1,'單挑'],[3,'3 對 3']].map(([v,n])=>`<button class="${T.fmt===v?'on':''}" data-v="${v}">${n}</button>`).join('')}</div>
     <span>先手</span><div class="chips" data-g="alt">${[[0,'算得快的先'],[1,'輪流先手']].map(([v,n])=>`<button class="${(T.alt?1:0)===v?'on':''}" data-v="${v}">${n}</button>`).join('')}</div>
-    <span>場地</span><div class="chips" data-g="arena"><button data-v="-1">‹</button><b class="aname">${T.arena==='random'?'隨機場地':ARENAS[T.arena].n}</b><button data-v="1">›</button></div></div>
-  <div class="tpls">${[0,1].map(i=>{const q=T.pl[i];return `<div class="tpl ${T.in[i]?'in':''} ${T.ready[i]?'rdy':''}" data-i="${i}"><div class="tph"><b>${PNAME[i]}</b><em>${stat(i)}</em><span class="tpc">${who(i)}</span></div>
-    <span>年級</span><div class="chips" data-g="grade">${[1,2,3,4,5,6,7].map(g=>`<button class="${q.grade===g?'on':''}" data-v="${g}">${g===7?'★':g}</button>`).join('')}</div>
-    <span>單元</span><div class="chips" data-g="unit">${Object.entries(UNITS).map(([k,u])=>`<button class="${q.unit===k?'on':''}" data-v="${k}" ${(u.from||1)>q.grade?'disabled':''}>${u.n}</button>`).join('')}</div>
-    <span>答題時間</span><div class="chips" data-g="tf">${TFS.map(f=>`<button class="${q.tf===f?'on':''}" data-v="${f}">${f===1?'正常':'×'+f}</button>`).join('')}</div>
-    <small class="tstd">${STD[q.unit][q.grade]||''}</small></div>`}).join('')}</div></div>
+    <span>場地</span><div class="chips" data-g="arena"><button data-v="-1">‹</button><b class="aname">${T.arena==='random'?'隨機場地':ARENAS[T.arena].n}</b><button data-v="1">›</button></div>${T.same?`<i class="tdiv"></i>${qrows(T.all,'all')}`:''}</div>
+  <div class="tpls ${T.same?'same':''}">${[0,1].map(i=>`<div class="tpl ${T.in[i]?'in':''} ${T.ready[i]?'rdy':''}" data-i="${i}"><div class="tph"><b>${PNAME[i]}</b><em>${stat(i)}</em><span class="tpc">${who(i)}</span></div>${T.same?'':qrows(T.pl[i],i)}</div>`).join('')}</div></div>
   <div class="foot"><button class="btn" id="tb">關閉房間</button><button class="btn primary" id="tgo" ${both?'':'disabled'}>${both?'開始對戰':'等兩位學生準備好'}</button></div>`;
   $('#tb').onclick=()=>{teachClose();netLobby()};$('#tgo').onclick=teachStart;
   el.querySelector('.troom').onclick=e=>{const b=e.target.closest('.chips button');if(!b||b.disabled)return;const g=b.parentElement.dataset.g,v=b.dataset.v,pl=b.closest('.tpl');
-    if(pl){const q=T.pl[+pl.dataset.i];if(g==='grade'){q.grade=+v;if((UNITS[q.unit].from||1)>q.grade)q.unit='calc'}else if(g==='unit')q.unit=v;else q.tf=+v}
+    if(g==='grade'||g==='unit'){const q=pl?T.pl[+pl.dataset.i]:T.all;if(g==='grade'){q.grade=+v;if((UNITS[q.unit].from||1)>q.grade)q.unit='calc'}else q.unit=v}
+    else if(g==='same'){const ns=v==='1';if(ns!==T.same){if(ns)Object.assign(T.all,T.pl[0]);else T.pl.forEach(q=>Object.assign(q,T.all));T.same=ns}}
     else if(g==='fmt'){if(T.fmt!==+v){T.fmt=+v;T.ready=[null,null];[0,1].forEach(i=>T.in[i]&&NET.hub.send(i,{t:'cfg',fmt:T.fmt,teacher:true,seat:i}))}}
     else if(g==='alt')T.alt=v==='1';
     else if(g==='arena'){const ids=['random',...Object.keys(ARENAS)];T.arena=ids[(ids.indexOf(T.arena)+(+v)+ids.length)%ids.length]}
-    sfx('tap');teachDraw()}}
+    sfx('tap');teachDraw()};
+  sliderBind(el,k=>k==='all'?T.all.ans:T.pl[+k].ans,(k,v)=>{(k==='all'?T.all:T.pl[+k]).ans=v})}
 function teachMsg(i,m){const T=NET.T;if(!T||!m)return;
   if(m.t==='ready'){T.ready[i]=m.cfg;sfx('first');teachDraw()}
   else if(m.t==='dp'||m.t==='rep'||m.t==='st'){NET.hub.send(1-i,m);if(m.t==='st'){T.st[i]=m.s;watchDraw()}if(m.t==='rep'){if(T.repWait[i]){const f=T.repWait[i];T.repWait[i]=null;f(m.k)}else T.repQ[i].push(m.k)}}
   else if(m.t==='act'){T.acts[i]=m;T.st[i]='done';NET.hub.send(1-i,{t:'st',s:'done'});watchDraw();watchTry()}
   else if(m.t==='bye'){T.in[i]=false;T.ready[i]=null;if(watch())teachStop(PNAME[i]+'離開了，這場對戰結束。');else teachDraw()}}
 function teachStart(){const T=NET.T;if(!T.ready[0]||!T.ready[1])return;
-  const cf=[0,1].map(i=>Object.assign({},T.ready[i],{grade:T.pl[i].grade,unit:T.pl[i].unit,tf:T.pl[i].tf,slow:false}));
+  const cf=[0,1].map(i=>{const q=T.same?T.all:T.pl[i];return Object.assign({},T.ready[i],{grade:q.grade,unit:q.unit,ans:q.ans,tf:1,slow:false})});
   const arena=T.arena==='random'?pick(Object.keys(ARENAS)):T.arena;T.acts=[null,null];T.repQ=[[],[]];T.repWait=[null,null];T.log=[[],[]];T.st=['',''];
   NET.hub.all({t:'start',arena,cf,alt:T.alt,fmt:T.fmt});T.ready=[null,null];T.ck={start:{arena,cf,alt:T.alt,fmt:T.fmt},g:null};T.lost=false;
   beginBattle('watch',arena,cf.map((c,i)=>Object.assign({},c,{name:PNAME[i]})),T.fmt,T.alt)}
@@ -2439,14 +2451,14 @@ function teachStop(msg){lostHide();if(NET.T){NET.T.ck=null;NET.T.lost=false}resT
 function teachAgain(){const T=NET.T;T.ck=null;G=null;$('#s-battle').classList.remove('show');show('s-setup');NET.hub.all({t:'again'});teachDraw()}
 // 觀戰：每回合等兩位學生的行動，算出結果後傳給兩邊，自己也播放動畫
 function watchRound(){const T=NET.T;T.waiting=true;T.st=['pick','pick'];if(T.acts[0]&&T.acts[0].r!==G.round)T.acts[0]=null;if(T.acts[1]&&T.acts[1].r!==G.round)T.acts[1]=null;[0,1].forEach(i=>{if(T.acts[i])T.st[i]='done'});
-  panel(`<div class="wpanel"><div class="wcols">${[0,1].map(i=>`<div class="wcol" id="wc${i}"></div>`).join('')}</div><div class="wctl"><span>調整答題時間</span>${[0,1].map(i=>`<div class="chips" data-i="${i}"><b>${PNAME[i]}</b>${TFS.map(f=>`<button data-v="${f}">${f===1?'正常':'×'+f}</button>`).join('')}</div>`).join('')}</div></div>`);
-  $('.wctl').onclick=e=>{const b=e.target.closest('button');if(!b)return;const i=+b.parentElement.dataset.i,tf=+b.dataset.v;G.players[i].tf=tf;T.pl[i].tf=tf;NET.hub.all({t:'tf',seat:i,tf});hud();watchDraw()};
+  panel(`<div class="wpanel"><div class="wcols">${[0,1].map(i=>`<div class="wcol" id="wc${i}"></div>`).join('')}</div><div class="wctl"><span>調整答題時間</span>${T.same?`<div class="wsl"><b>兩人</b>${sliderHTML('all',G.players[0].ans||ANSWER_SEC)}</div>`:[0,1].map(i=>`<div class="wsl"><b>${PNAME[i]}</b>${sliderHTML(i,G.players[i].ans||ANSWER_SEC)}</div>`).join('')}</div></div>`);
+  sliderBind($('.wctl'),k=>G.players[k==='all'?0:+k].ans||ANSWER_SEC,(k,v)=>{(k==='all'?[0,1]:[+k]).forEach(i=>{G.players[i].ans=v;G.players[i].tf=1;T.pl[i].ans=v;NET.hub.all({t:'tf',seat:i,ans:v,tf:1})});if(k==='all')T.all.ans=v;hud()});
   watchDraw();watchTry()}
 function watchDraw(){const T=NET.T;if(!T||!watch())return;[0,1].forEach(i=>{const c=$('#wc'+i);if(!c)return;const L=T.log[i],last=L[L.length-1],wrong=L.filter(x=>!x.ok).length;
     c.innerHTML=`<div class="wh"><b>${PNAME[i]}</b><em class="${T.st[i]==='done'?'ok':''}">${OPPST[T.st[i]]||'準備中…'}</em></div>
       <div class="wq">${L.length?[...L].reverse().map(x=>`<div class="we"><span class="wr">第 ${x.r} 回合・${x.mv}</span>${x.q?`<span class="wqq">${x.q.q.includes('？')?x.q.q.replace('？',`<mark>${ansHTML(x.q.a)}</mark>`):x.q.q+' → <mark>'+ansHTML(x.q.a)+'</mark>'}</span><span class="wa ${x.ok?'ok':'no'}">${(x.ok?'✓ 答對':'✗ '+(x.given==null?'時間到':'答 '+valHTML(String(x.given))))+'・'+x.time+' 秒'}</span>`:''}</div>`).join(''):'<span class="wr">還沒有作答紀錄</span>'}</div>
       <div class="ws">答對 ${L.filter(x=>x.ok).length}・答錯 ${wrong}・${G.players[i].grade===7?'挑戰級':G.players[i].grade+' 年級'} ${UNITS[G.players[i].unit].n}</div>`});
-  document.querySelectorAll('.wctl .chips').forEach(ch=>{const tf=G.players[+ch.dataset.i].tf||1;ch.querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.v===tf))})}
+}
 function watchTry(){const T=NET.T;if(!T||!watch()||!T.waiting||G.over)return;const a=T.acts;if(!a[0]||!a[1]||a[0].r!==G.round||a[1].r!==G.round)return;
   T.waiting=false;[0,1].forEach(i=>{const m=a[i];if(m.log){const ok=!!m.a.correct;T.log[i].push({r:G.round,ok,time:m.a.time,q:m.log.q,given:m.log.given,mv:m.log.mv});if(!ok&&m.log.q)G.players[i].miss.push(m.log.q)}else T.log[i].push({r:G.round,ok:true,time:0,q:null,mv:'換人'})});
   G.acts=[a[0].a,a[1].a];T.acts=[null,null];resolvePhase()}
