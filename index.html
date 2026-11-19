@@ -323,6 +323,9 @@ h1,h2,.ribbon,.bigcard b,.big{font-family:"LXGW WenKai TC",var(--body)}
 .set .sw2{grid-row:1/3;grid-column:2;width:52px;height:28px;border:3px solid var(--ink);border-radius:999px;background:var(--paper-2);position:relative}
 .set .sw2::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--ink);transition:left .15s}
 .set.on .sw2{background:#9bd66f}.set.on .sw2::after{left:26px}
+.trng{grid-column:1/-1;width:100%;accent-color:#d99a12;height:28px;margin:4px 0 0}
+.ntime{align-items:center}.ntl{font-weight:900;font-size:15px;color:#3a2a1a}.ntime .trng{flex:1 1 180px;max-width:320px;margin:0}.ninfo{text-align:center;font-weight:800}
+.tset{cursor:default}.tstep{grid-row:1/3;grid-column:2;display:flex;align-items:center;gap:6px}.tstep button{width:38px;height:38px;border-radius:50%;border:3px solid var(--ink);background:#ffd93b;font:900 22px/1 var(--display);padding:0;box-shadow:0 3px 0 var(--ink)}.tstep button:active{translate:0 2px;box-shadow:0 1px 0 var(--ink)}.tstep b{min-width:4.2em;text-align:center;font-size:18px}
 .modal{position:fixed;inset:0;background:rgba(51,38,31,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:9}
 .modal.on{display:flex}
 .modal .box{background:var(--paper);border:3px solid var(--ink);border-radius:18px;max-width:520px;width:100%;max-height:88%;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
@@ -1347,6 +1350,7 @@ mark .fr{margin:0}
 <div class="modal" id="setm"><div class="box">
   <h2>設定</h2>
   <div class="sets">
+    <div class="set tset"><span>答題時間</span><span class="tstep" id="tstep0"><button data-d="-5" aria-label="減少 5 秒">−</button><b id="tval">20 秒</b><button data-d="5" aria-label="增加 5 秒">＋</button></span><input class="trng" id="trng" type="range" min="5" max="120" step="1" value="20" aria-label="答題時間（秒）"><small id="tsub">每一題的基本時間，可以拉桿子或按 ± 調整。連線對戰由房主在開房間時設定。</small></div>
     <button class="set" data-o="easy"><span>寬鬆模式</span><span class="sw2"></span><small>選招與答題的時間都加倍</small></button>
     <button class="set" data-o="soft"><span>溫和回饋</span><span class="sw2"></span><small>答錯不顯示紅色叉叉，改用橘色的「再想想」</small></button>
     <button class="set" data-o="sfx"><span>音效</span><span class="sw2"></span><small>答對、答錯、各屬性出招與命中的聲音</small></button>
@@ -1622,7 +1626,7 @@ function newGame(mode,arena,cfgs,fmt=1){const ps=cfgs.map(c=>newPlayer(c,fmt===3
 const alive=p=>p.team.map((u,k)=>u.hp>0?k:-1).filter(k=>k>=0);
 function ultNeed(p){return (p.hp<p.maxHp*.3?2:3)-(p.ultCut||0)}
 function canUse(p,mi){const m=CHARS[p.char].moves[mi];return m.type!=='ult'||p.streak>=ultNeed(p)}
-function answerLimit(p){return ANSWER_SEC+(p.char==='turtle'?5:0)-(p.jamNow?6:0)-(p.chillNow?4:0)+(p.timeAdj||0)}
+function answerLimit(p){return (typeof ansBase==='function'?ansBase():ANSWER_SEC)+(p.char==='turtle'?5:0)-(p.jamNow?6:0)-(p.chillNow?4:0)+(p.timeAdj||0)}
 function beginRound(G){for(const p of G.players){p.jamNow=p.jam>0;if(p.jamNow)p.jam--;p.chillNow=p.chill>0;if(p.chillNow)p.chill--}}
 function calcDamage(G,ai,m,correct,first){
   const A=G.players[ai],D=G.players[1-ai],t=TYPES[m.type];
@@ -1758,9 +1762,10 @@ document.querySelectorAll('#scene img').forEach(im=>im.onclick=()=>{const sc=$('
   sc.querySelectorAll('.ntag').forEach(t=>t.remove());const t=document.createElement('span');t.className='ntag';t.textContent=CHARS[im.dataset.c].n;t.style.left=im.offsetLeft+im.offsetWidth/2+'px';t.style.top=im.offsetTop+'px';sc.appendChild(t);setTimeout(()=>t.remove(),1300)});
 
 /* 設定與音效 */
-const OPT={easy:false,soft:false,sfx:true,bgm:true};
+const OPT={easy:false,soft:false,sfx:true,bgm:true,ans:20};
 try{Object.assign(OPT,JSON.parse(localStorage.getItem('mathbattle-opt')||'{}'))}catch(e){}
-function applyOpt(){document.body.classList.toggle('soft',OPT.soft);document.querySelectorAll('.set').forEach(b=>b.classList.toggle('on',!!OPT[b.dataset.o]));try{localStorage.setItem('mathbattle-opt',JSON.stringify(OPT))}catch(e){}}
+function applyOpt(){const tv=document.getElementById('tval');if(tv)tv.textContent=`${OPT.ans} 秒`;const tr=document.getElementById('trng');if(tr)tr.value=OPT.ans;document.body.classList.toggle('soft',OPT.soft);document.querySelectorAll('.set').forEach(b=>b.classList.toggle('on',!!OPT[b.dataset.o]));try{localStorage.setItem('mathbattle-opt',JSON.stringify(OPT))}catch(e){}}
+const ansBase=()=>G&&G.mode==='net'?(G.ans||ANSWER_SEC):G&&G.mode==='watch'?ANSWER_SEC:Math.max(5,Math.min(120,+OPT.ans||ANSWER_SEC));   // 連線時雙方都用房主開房時設定的秒數；老師房另用老師的調整
 const tmul=()=>OPT.easy&&!(G&&(G.mode==='net'||G.mode==='watch'))?2:1;
 let AC=null,SFXG=null,BGMG=null,NBUF=null;
 function audio(){if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();SFXG=AC.createGain();SFXG.gain.value=.9;SFXG.connect(AC.destination);BGMG=AC.createGain();BGMG.gain.value=.5;BGMG.connect(AC.destination);
@@ -1880,7 +1885,9 @@ document.addEventListener('keydown',e=>{if(!$('#s-dex').classList.contains('on')
   if(e.key==='ArrowRight'||e.key==='ArrowLeft')dexGo(e.key==='ArrowRight'?1:-1);else if(e.key==='Escape')show('s-title')});
 
 $('#set-x').onclick=()=>$('#setm').classList.remove('on');
-document.querySelectorAll('.set').forEach(b=>b.onclick=async()=>{if(b.dataset.o==='easy'&&!OPT.easy&&!(await pinGate()))return;OPT[b.dataset.o]=!OPT[b.dataset.o];applyOpt();try{audio();bgm(BGM.want)}catch(e){}});
+document.querySelectorAll('#tstep0 button').forEach(b=>b.onclick=()=>{OPT.ans=Math.max(5,Math.min(120,(+OPT.ans||20)+ +b.dataset.d));applyOpt();sfx('tap')});
+$('#trng').oninput=e=>{OPT.ans=Math.max(5,Math.min(120,+e.target.value||20));applyOpt()};
+document.querySelectorAll('.set[data-o]').forEach(b=>b.onclick=async()=>{OPT[b.dataset.o]=!OPT[b.dataset.o];applyOpt();try{audio();bgm(BGM.want)}catch(e){}});
 applyOpt();
 const ELC={fire:'#e8522a',water:'#2b7fd3',grass:'#4a9f2c',thunder:'#f5d313',earth:'#6f4a33',ice:'#bfe6f2',wind:'#2a9d8f',psy:'#a45bc9',none:'#b9b0a6'};
 function burstAt(i,el){const st=$('#stage'),f=$('#f'+i);if(!st||!f)return;const x=f.offsetLeft+f.offsetWidth/2,y=f.offsetTop+f.offsetHeight/2;
@@ -2093,7 +2100,7 @@ function renderSetup(){
       <button class="ftk ${S.fmt===3?'sel':''}" data-k="fmt" data-v="3"><span class="fvs t3"><span><img src="img/lion.webp" alt=""><img src="img/octopus.webp" alt=""><img src="img/chameleon.webp" alt=""></span><i>VS</i><span class="r"><img src="img/owl.webp" alt=""><img src="img/stego.webp" alt=""><img src="img/beetle.webp" alt=""></span></span><b>3 對 3</b><small>輪流選角，可以換人</small></button></div>`:''}
     <div class="gruler"><span class="glab">年級</span>${[1,2,3,4,5,6,7].map(g=>`<button class="gt ${p.grade===g?'sel':''}" data-k="grade" data-v="${g}" aria-label="${g===7?'挑戰級':g+' 年級'}"><b>${g===7?'★':g}</b></button>`).join('')}<span class="gm" id="gm" style="left:${4+(p.grade-.5)*92/7}%"><em>${p.grade===7?'挑戰級':p.grade+' 年級'}</em><img src="img/${masc}.webp" alt=""></span></div>
     <div class="boards">${Object.entries(UNITS).map(([k,u])=>{const b=boardInfo(k,p.grade);return `<button class="board ${p.unit===k?'sel':''} ${b.na?'na':''}" data-k="unit" data-v="${k}" ${b.na?'disabled':''}><span class="chalk" data-u="${k}"><span>${b.ex}</span></span><b>${u.n}</b><small data-s="${k}">${b.std}</small></button>`}).join('')}</div>
-    ${S.mode==='net'?'':`<div class="aids ${S.unlock?'':'locked'}"><button class="aid lockb" data-k="unlock"><i></i>老師設定（需要密碼）</button><button class="aid ${p.slow?'on':''}" data-k="slow"><i></i>答題時間加倍</button><button class="aid ${S.alt?'on':''}" data-k="alt"><i></i>輪流先手（不比速度）</button></div>`}
+    ${S.mode==='net'?(S.pre?`<div class="aids ntime"><b class="ntl">每題答題時間</b><span class="tstep" id="tstepN"><button data-d="-5" aria-label="減少 5 秒">−</button><b id="ntv">${S.ans} 秒</b><button data-d="5" aria-label="增加 5 秒">＋</button></span><input class="trng" id="nrng" type="range" min="5" max="120" step="1" value="${S.ans}" aria-label="答題時間（秒）"><span class="aid ${S.alt?'on':''}" data-k="alt" role="button"><i></i>輪流先手</span></div>`:(NET.ans&&!NET.teacher?`<p class="sub ninfo">這個房間每題 ${NET.ans} 秒</p>`:'')):`<div class="aids"><button class="aid ${p.slow?'on':''}" data-k="slow"><i></i>答題時間加倍</button><button class="aid ${S.alt?'on':''}" data-k="alt"><i></i>輪流先手（不比速度）</button></div>`}
     ${S.mode==='cpu'?`<div class="cpus">${Object.entries(CPU).map(([k,c],j)=>`<button class="cpub ${S.cpuLevel===k?'sel':''}" data-k="cpu" data-v="${k}"><span class="cface" style="background-position:${j*50}% 0"></span><b>${c.n}</b></button>`).join('')}</div>`:''}
     <p class="sub">黑板上是這個年級的例題，下面小字是對應的課綱條目。兩位玩家可以選不同年級與單元。</p>`;
   }else if(view==='arena'){
@@ -2138,7 +2145,8 @@ function renderSetup(){
   el.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{
     const k=b.dataset.k,v=b.dataset.v;
     if(k==='unlock'){pinGate().then(ok=>{if(ok){S.unlock=true;b.closest('.aids').classList.remove('locked')}});return}
-    if(k==='slow'||k==='alt'){if(!S.unlock)return;if(k==='slow')p.slow=!p.slow;else S.alt=!S.alt;b.classList.toggle('on');return}
+    if(k==='alt'&&S.pre){S.alt=!S.alt;b.classList.toggle('on');return}
+    if(k==='slow'||k==='alt'){if(k==='slow')p.slow=!p.slow;else S.alt=!S.alt;b.classList.toggle('on');return}
     if(k==='grade'||k==='unit'||k==='cpu'){ // 就地更新，不整頁重畫，動畫才不會卡
       if(k==='grade'){if(p.grade===+v)return;p.grade=+v;const gm=$('#gm');gm.style.left=(4+(p.grade-.5)*92/7)+'%';gm.querySelector('em').textContent=p.grade===7?'挑戰級':p.grade+' 年級';
         gm.classList.remove('hop');void gm.offsetWidth;gm.classList.add('hop');sfx('hop');
@@ -2172,6 +2180,8 @@ function renderSetup(){
       $('#ted').dataset.v=k;$('#tld').dataset.v=k;$('#tld').style.visibility=k?'visible':'hidden';
       el.querySelectorAll('.lu').forEach(b=>{const on=+b.dataset.j===k;b.classList.toggle('sel',on);if(on&&hop){b.classList.remove('hop');void b.offsetWidth;b.classList.add('hop')}})};
     el.querySelectorAll('.lu').forEach(b=>b.onclick=()=>pickT(+b.dataset.j,true));pickT(S.tf,false)}
+  {const tn=$('#tstepN'),setN=v=>{S.ans=Math.max(5,Math.min(120,v||ANSWER_SEC));$('#ntv').textContent=`${S.ans} 秒`;$('#nrng').value=S.ans};
+   if(tn){tn.querySelectorAll('button').forEach(b=>b.onclick=e=>{e.stopPropagation();setN(S.ans+ +b.dataset.d);sfx('tap')});$('#nrng').oninput=e=>setN(+e.target.value)}}
   $('#sb').onclick=()=>{S.focus=0;if(editing){S.edit=null;renderSetup();return}S.tf=0;if(S.step===0){if(S.pre){netLeave();return netLobby()}if(S.mode==='net')netLeave('你離開了房間');show('s-title')}else{S.step--;renderSetup()}};
   $('#sn').onclick=()=>{S.focus=0;if(editing){S.edit=null;renderSetup();return}S.tf=0;if(last){if(S.pre)netOpenRoom();else if(S.mode==='net')netReady();else startBattle()}else{S.step++;renderSetup()}};
 }
@@ -2244,12 +2254,12 @@ function netRetry(){const code=NET.code;let n=0;const go=()=>{if(!NET.lost||NET.
       onError:()=>{if(done||NET.link!==L)return;done=true;try{L.close()}catch(e){}setTimeout(go,3000)}});NET.link=L};go()}
 function netBack(){lostHide();NET.lost=false;NET.live=true;NET.rx=Date.now();sfx('switch');
   if(NET.ck&&NET.ck.g){const m={t:'resume',start:NET.ck.start,g:NET.ck.g};NET.link.send(m);netResume(m)}
-  else{const q=NET.pre||{};NET.link.send({t:'cfg',fmt:NET.fmt,seat:1,grade:q.grade,unit:q.unit});netSetup()}}
+  else{const q=NET.pre||{};NET.ans=q.ans||ANSWER_SEC;NET.link.send({t:'cfg',fmt:NET.fmt,seat:1,grade:q.grade,unit:q.unit,ans:NET.ans});netSetup()}}
 function netCk(){if(!NET.ck)return;NET.ck.g=JSON.parse(JSON.stringify({round:G.round,players:G.players}));roomSave()}
 function netResume(m){lostHide();NET.lost=false;NET.live=true;NET.rx=Date.now();if(m.teacher){NET.seat=m.seat;NET.teacher=true}const mine=NET.seat,st=m.start,old=net()?G:null;
   const cf=[st.cf[mine],st.cf[1-mine]].map((c,i)=>Object.assign({},c,{name:i===0?'你':'對手'}));
   resToken++;stopTimer();clearTimeout(NET.nxT);document.querySelectorAll('.vsfs,.sw,.fst,.spd').forEach(e=>e.remove());$('#s-battle').classList.remove('show');
-  G=newGame('net',st.arena,cf,st.fmt||1);G.alt=st.alt;G.round=m.g.round;
+  G=newGame('net',st.arena,cf,st.fmt||1);G.alt=st.alt;G.ans=st.ans||ANSWER_SEC;G.round=m.g.round;
   (mine===1?[m.g.players[1],m.g.players[0]]:m.g.players).forEach((q,i)=>{const p=G.players[i],r=Object.assign({},q);delete r.team;delete r.name;delete r.miss;delete r.cpu;Object.assign(p,r);q.team.forEach((u,k)=>Object.assign(p.team[k],u));
     p.miss=i===0?(old?old.players[0].miss:(mine===0?q.miss||[]:[])):[]});
   NET.ck={start:st,g:m.g};NET.cfg=[null,null];NET.ready=false;NET.oppAct=null;NET.res=null;NET.rep=null;NET.repWait=null;NET.sent=false;roomSave();
@@ -2262,19 +2272,19 @@ function netRejoin(){const r=roomGet();if(!r||NET.link)return;const host=r.role=
 setInterval(()=>{if(!NET.link||!NET.live||NET.lost)return;try{NET.link.send({t:'hb'})}catch(e){}if(Date.now()-NET.rx>12000)netLost()},3000);
 $('#btn-rejoin').onclick=netRejoin;rejoinDraw();
 function netHost(){NET.role='host';NET.seat=0;NET.teacher=false;NET.fmt=NET.fmt||1;NET.pre=null;
-  S={mode:'net',pre:true,step:0,fmt:NET.fmt,arena:'standard',cpuLevel:'normal',team:[[],[]],draft:null,edit:null,alt:false,
+  S={mode:'net',pre:true,ans:Math.max(5,Math.min(120,+OPT.ans||ANSWER_SEC)),step:0,fmt:NET.fmt,arena:'standard',cpuLevel:'normal',team:[[],[]],draft:null,edit:null,alt:false,
     p:[{name:'你',grade:5,unit:'calc',char:null,moves:[]},{name:'對手',grade:5,unit:'calc',char:null,moves:[]}]};
   buildSteps();show('s-setup');renderSetup()}
 function netOpenRoom(tries=0){const code=String(1000+Math.floor(Math.random()*9000)),el=$('#s-setup'),p0=S.p[0];
-  if(S.pre)NET.pre={grade:p0.grade,unit:p0.unit,slow:!!p0.slow,arena:S.arena,alt:!!S.alt};
+  if(S.pre)NET.pre={grade:p0.grade,unit:p0.unit,slow:!!p0.slow,arena:S.arena,alt:!!S.alt,ans:S.ans};
   const q=NET.pre;NET.role='host';NET.seat=0;NET.teacher=false;NET.code=code;S.pre=false;
   el.innerHTML=`<h2>房間開好了</h2><p class="sub">把密碼告訴對手，等他加入。</p>
-  <div class="nsum"><span>${NET.fmt===3?'3 對 3':'單挑'}</span><span>${q.grade>6?'挑戰級':q.grade+' 年級'}・${UNITS[q.unit].n}</span><span>場地：${q.arena==='random'?'隨機':ARENAS[q.arena].n}</span></div>
+  <div class="nsum"><span>${NET.fmt===3?'3 對 3':'單挑'}</span><span>${q.grade>6?'挑戰級':q.grade+' 年級'}・${UNITS[q.unit].n}</span><span>場地：${q.arena==='random'?'隨機':ARENAS[q.arena].n}</span><span>每題 ${q.ans||ANSWER_SEC} 秒${q.alt?'・輪流先手':''}</span></div>
   <div class="center"><div class="ncode" id="ncode">${[...code].map((d,k)=>`<b style="--k:${k}">${d}</b>`).join('')}</div><p class="nwait" id="nst">正在開房間…</p><img class="netpic" src="img/owl.webp" alt=""></div>
   <div class="foot"><button class="btn" id="nb">取消</button></div>`;
   $('#nb').onclick=()=>{netLeave();netLobby()};
   NET.link=netOpen('host',code,Object.assign(netHandlers(),{onListen:()=>{const t=$('#nst');if(t)t.textContent='等待對手加入…'},
-    onOpen:()=>{if(NET.live)return netBack();NET.live=true;NET.rx=Date.now();roomSave();sfx('switch');NET.link.send({t:'cfg',fmt:NET.fmt,seat:1,grade:q.grade,unit:q.unit});netSetup()},
+    onOpen:()=>{if(NET.live)return netBack();NET.live=true;NET.rx=Date.now();roomSave();sfx('switch');NET.ans=q.ans||ANSWER_SEC;NET.link.send({t:'cfg',fmt:NET.fmt,seat:1,grade:q.grade,unit:q.unit,ans:NET.ans});netSetup()},
     onError:m=>{if(m==='ID_TAKEN'&&tries<5){try{NET.link.close()}catch(e){}NET.link=null;return netOpenRoom(tries+1)}const t=$('#nst');if(t){t.textContent=m==='ID_TAKEN'?'房間密碼剛好被用走了，請再試一次。':m;t.classList.add('err')}}}));
   if(NETTEST){const t=$('#nst');if(t)t.textContent='等待對手加入…'}}
 function netJoin(){const el=$('#s-setup');let val='';
@@ -2302,13 +2312,13 @@ function netReady(){const p=S.p[0],srt=m=>[...m].sort((a,b)=>a-b);
   $('#nb').onclick=()=>{netLeave();show('s-title')};
   NET.link.send({t:'ready',cfg});netMaybeStart()}
 function netMaybeStart(){if(NET.role!=='host'||!NET.cfg[0]||!NET.cfg[1]||!NET.ready)return;
-  const arena=S.arena==='random'?pick(Object.keys(ARENAS)):S.arena,m={t:'start',arena,cf:NET.cfg,alt:!!S.alt,fmt:NET.fmt};NET.link.send(m);netStart(m)}
+  const arena=S.arena==='random'?pick(Object.keys(ARENAS)):S.arena,m={t:'start',arena,cf:NET.cfg,alt:!!S.alt,fmt:NET.fmt,ans:(NET.pre&&NET.pre.ans)||ANSWER_SEC};NET.link.send(m);netStart(m)}
 function netStart(m){NET.ck={start:m,g:null};NET.ready=false;NET.cfg=[null,null];NET.oppAct=null;NET.res=null;NET.rep=null;NET.repWait=null;NET.sent=false;
   const mine=NET.seat,cf=[m.cf[mine],m.cf[1-mine]].map((c,i)=>Object.assign({},c,{name:i===0?'你':'對手'}));
   const lead=c=>c.team?c.team.map(u=>u.char):[c.char];
   const d=document.createElement('div');d.className='vsfs';d.innerHTML=`<i class="vl"></i><i class="vr"></i><div class="vt a">${lead(cf[0]).map(c=>`<img src="img/${c}.webp" alt="">`).join('')}<b>你</b></div><div class="vt b">${lead(cf[1]).map(c=>`<img src="img/${c}.webp" alt="">`).join('')}<b>對手</b></div><em>VS</em>`;
   document.body.appendChild(d);sfx('ult');setTimeout(()=>{d.remove()},1900);
-  setTimeout(()=>{if(!NET.link)return;beginBattle('net',m.arena,cf,m.fmt||1,m.alt)},1500)}
+  setTimeout(()=>{if(!NET.link)return;beginBattle('net',m.arena,cf,m.fmt||1,m.alt);G.ans=m.ans||ANSWER_SEC},1500)}
 // 加入者把房主視角的資料左右對調
 const swp=i=>i===0?1:i===1?0:i;
 const netFlipEv=ev=>ev.map(e=>{const q=Object.assign({},e);if(q.p!==undefined)q.p=swp(q.p);if(q.hp)q.hp=[q.hp[1],q.hp[0]];if(q.winner!==undefined)q.winner=swp(q.winner);return q});
@@ -2317,7 +2327,7 @@ const OPPST={pick:'選招中…',ans:'作答中…',done:'已完成 ✓',rep:'�
 function netOpp(st){NET.oppSt=st;const t=$('#oppst');if(t){t.hidden=!st;t.textContent='對手'+(OPPST[st]||'');t.classList.toggle('ok',st==='done')}const w=$('#wst');if(w)w.textContent=st==='done'?'對手也完成了！':'對手'+(OPPST[st]||'作答中…')}
 function netState(st){try{NET.link&&NET.link.send({t:'st',s:st})}catch(e){}}
 function netMsg(m){if(!m||!NET.link)return;
-  if(m.t==='cfg'){if(NET.role==='guest'){NET.live=true;NET.ck=null;NET.fmt=m.fmt||1;NET.seat=m.seat===0?0:1;NET.teacher=!!m.teacher;NET.dflt=m.grade?{grade:m.grade,unit:m.unit||'calc'}:null;roomSave();netSetup()}}
+  if(m.t==='cfg'){if(NET.role==='guest'){NET.live=true;NET.ck=null;NET.fmt=m.fmt||1;NET.seat=m.seat===0?0:1;NET.teacher=!!m.teacher;NET.dflt=m.grade?{grade:m.grade,unit:m.unit||'calc'}:null;NET.ans=m.teacher?0:(m.ans||ANSWER_SEC);roomSave();netSetup()}}
   else if(m.t==='again'){if(NET.teacher&&S&&S.mode==='net')netReady()}
   else if(m.t==='tf'){if(net()){const p=G.players[m.seat===NET.seat?0:1];p.tf=m.tf;hud()}}
   else if(m.t==='dp'){if(S&&S.mode==='net'&&S.draft&&S.draft.turn<6&&S.draft.order[S.draft.turn]===1){S.team[1].push({name:CHARS[m.c].n,char:m.c,moves:recoMoves(m.c)});S.draft.turn++;
@@ -2443,14 +2453,16 @@ function watchTry(){const T=NET.T;if(!T||!watch()||!T.waiting||G.over)return;con
 function watchRep(i,spot){const T=NET.T;spot.onclick=null;spot.className='spot pick';spot.innerHTML=`<p class="nwait" style="margin:auto">${PNAME[i]}正在選下一隻上場…</p>`;
   return new Promise(res=>{if(T.repQ[i].length)return res(T.repQ[i].shift());T.repWait[i]=res})}
 /* 老師密碼：對電腦與同機雙人時，輔助功能要先輸入密碼才能打開 */
-function pinGate(){let saved=null;try{saved=localStorage.getItem('mathbattle-pin')}catch(e){}
+let PINOK=false;   // 輸入一次後，到關閉網頁前都不用再輸入
+const TEACHER_PIN='0330';
+function pinGate(){if(PINOK)return Promise.resolve(true);const saved=TEACHER_PIN;
   return new Promise(done=>{let val='';const m=document.createElement('div');m.className='modal on pinm';
-    m.innerHTML=`<div class="sheet2"><b class="pt">${saved?'輸入老師密碼':'第一次使用：請老師設定 4 位數密碼'}</b><div class="ncode in sm" id="pcode"><b></b><b></b><b></b><b></b></div><p class="nwait" id="pst">&nbsp;</p>
+    m.innerHTML=`<div class="sheet2"><b class="pt">輸入老師密碼</b><div class="ncode in sm" id="pcode"><b></b><b></b><b></b><b></b></div><p class="nwait" id="pst">&nbsp;</p>
       <div class="pad npad" id="ppad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-n="${n}">${n}</button>`).join('')}<button class="del" data-n="del">刪除</button><button data-n="0">0</button><button class="ok" data-n="ok">確定</button></div><button class="btn small" id="pcx">取消</button></div>`;
     document.body.appendChild(m);const draw=()=>m.querySelectorAll('#pcode b').forEach((b,k)=>b.textContent=val[k]?'●':''),end=ok=>{m.remove();done(ok)};
     m.querySelector('#pcx').onclick=()=>end(false);
     m.querySelector('#ppad').onclick=e=>{const b=e.target.closest('button');if(!b)return;const n=b.dataset.n;
-      if(n==='ok'){if(val.length!==4)return;if(!saved){try{localStorage.setItem('mathbattle-pin',val)}catch(e){}return end(true)}if(val===saved)return end(true);val='';draw();const t=m.querySelector('#pst');t.textContent='密碼不對';t.classList.add('err');return}
+      if(n==='ok'){if(val.length!==4)return;if(val===saved){PINOK=true;return end(true)}val='';draw();const t=m.querySelector('#pst');t.textContent='密碼不對';t.classList.add('err');return}
       if(n==='del')val=val.slice(0,-1);else if(val.length<4)val+=n;draw()}})}
 /* 對戰 */
 function startBattle(){
